@@ -5,4 +5,8 @@
 
 # Usage
 
-The program expects the uncleaned dataset to be in the same directory as ``scrub.py`` in a file called ``radiocarbon_raw.csv``. Execute the program by simply running ``python scrub.py`` in the command line. The program will spit out the clean dataset in a file called ``radiocarbon_scrubbed.csv`` and a list of unknown lab codes in ``unknown_codes.csv``. 
+1.  Ensure the uncleaned dataset is named ``radiocarbon_raw.csv`` and in the same directory as ``scrub.py``. 
+2.  Ensure that ``radiocarbon_raw.csv`` is saved using UTF-8 encoding. This can be accomplished by most CSV-handling programs.
+3.  Execute the program by simply running ``python scrub.py`` in the command line.
+
+The program will spit out the clean dataset in a file called ``radiocarbon_scrubbed.csv`` and a list of unknown lab codes in ``unknown_codes.csv``. 
