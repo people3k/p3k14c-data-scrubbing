@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy  as np
+import io
 from tqdm import tqdm
 import ftfy
 
@@ -14,6 +15,7 @@ LAT           = 'Lat'
 LON           = 'Long'
 AGE           = 'CRA'
 STD_DEV       = 'Sd'
+LOC_ACCURACY  = 'LocAccuracy'
 FUZZ_FACTOR   = 0.5
 
 pd.options.mode.chained_assignment = None  # default='warn'
@@ -222,12 +224,18 @@ def handleDuplicates(records):
     # index index index
     records = records.reset_index()
 
-    # Now, keep an arbitrary duplicate if both the date and location match
+    # Now, keep an arbitrary duplicate if both the date and precise coordinates match
     records = records.drop_duplicates(subset=[LAB_ID, AGE, LAT, LON])
+
+    # Sort the records by LocAccuracy so that higher LocAccuracy is chosen first
+    records = records.sort_values(by=[LOC_ACCURACY], ascending=False)
 
     # If the lab number and the dates match, prioritize entries with lat/long info,
     # but delete entries that have existing mismatching lat/long info
     records = records.groupby(LAB_ID).agg(combineDups)
+
+    # Sort records back for algorithms that rely on LAB_ID order
+    records = records.sort_values(by=[LAB_ID])
 
     # Filter out bad entries
     records = records[\
