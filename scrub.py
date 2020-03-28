@@ -17,6 +17,7 @@ AGE           = 'CRA'
 STD_DEV       = 'Sd'
 LOC_ACCURACY  = 'LocAccuracy'
 FUZZ_FACTOR   = 0.5
+PARENT_CHILD_FILE = 'Parent_Child_Table.csv'
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -214,6 +215,53 @@ def combineDups(x):
         return np.nan
     # Otherwise, return the first coordinate
     return firstCoord
+
+# A magical function that is infinitely and arcanely more powerful than np.isnan
+def isNan(thing):
+    return str(thing) == 'nan'
+
+def recursiveYield(thing):
+    if isinstance(thing, list):
+        for sub in thing:
+            yield from flatten(sub)
+    else:
+        yield thing
+
+# Flatten an n-dimensional list
+def flatten(ndlist):
+    return list(recursiveYield(ndlist))
+
+
+def getPrevGen(table, parentList):
+    # No parents
+    if isNan(parentList) or parentList == []:
+        return []
+   
+    validParents = [parent for parent in parentList if parent in list(table.index)]
+    parentParents = [table.at[parent, 'ParentDatasets'] for parent in validParents]
+    parentParents = [p for p in flatten(parentParents) if not isNan(p)]
+    return parentParents + flatten(getPrevGen(table, parentParents))
+    
+
+# Include all parent information for child datasets so that the oldest ancestor
+# can be prioritized. 
+def includeAllParents(table):
+    # Oldest ancestors are listed last
+    table['ParentDatasets'] = table['ParentDatasets'].apply(
+            lambda parentList :
+            parentList if isNan(parentList) else parentList + getPrevGen(table,parentList)
+        )
+    return table
+
+# Get the parent child tree and include recursive info for all parents
+def getParentChildTree():
+    table = pd.read_csv(PARENT_CHILD_FILE, index_col=0)
+    # Convert strings to list
+    table['ParentDatasets'] = table['ParentDatasets'].apply(lambda s:
+            np.nan if isNan(s) else list(map(lambda i: i.strip(), s.split(',')))
+            )
+    table = includeAllParents(table)
+    return table
  
 # Deal with entries bearing duplicate lab codes.
 def handleDuplicates(records):
@@ -227,6 +275,9 @@ def handleDuplicates(records):
 
     # Sort the records by LocAccuracy so that higher LocAccuracy is chosen first
     records = records.sort_values(by=[LOC_ACCURACY], ascending=False)
+
+    # Fetch the parent-child tree
+    familyTree = getParentChildTree()
 
     # If the lab number and the dates match, prioritize entries with lat/long info,
     # but delete entries that have existing mismatching lat/long info
