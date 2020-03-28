@@ -280,7 +280,7 @@ def finishScrubbing(records):
     records = records[records[STD_DEV] <= records[AGE]]
 
     # Remove records that are too old to be meaningful
-    records = records[records[AGE] <= 10000]
+    records = records[records[AGE] <= 43500]
 
     # Properly format null entries
     records[LAT] = records[LAT].apply(justFloats)
