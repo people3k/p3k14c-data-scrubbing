@@ -23,7 +23,6 @@ pd.options.mode.chained_assignment = None  # default='warn'
 # Get a lower-case lab code given a 
 # full lab number.
 def codeFromLabNum(labnum):
-    # TODO Make this more generic to remove ALL special chars
     return ''.join(
          [i for i in str(labnum).split('-')[0]\
              if not i.isdigit()\
@@ -38,7 +37,6 @@ def codeFromLabNum(labnum):
              .replace(')','')\
              .replace('#','')\
              .replace('/','')\
-             .replace('?','')\
              .replace('’','')\
              .replace('&','')\
 
