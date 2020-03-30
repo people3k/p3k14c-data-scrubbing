@@ -16,6 +16,7 @@ LON           = 'Long'
 AGE           = 'CRA'
 STD_DEV       = 'Sd'
 LOC_ACCURACY  = 'LocAccuracy'
+SOURCE        = 'Source'
 FUZZ_FACTOR   = 0.5
 PARENT_CHILD_FILE = 'Parent_Child_Table.csv'
 
@@ -187,12 +188,27 @@ def mismatchingEntries(nums, fuzzFactor=FUZZ_FACTOR):
     # No mismatched data => matching data
     return False
 
+# Given a list of at least two sources, choose the older one from the tree.
+def oldestSource(sources, familyTree):
+    # Quite simply, if the source has no parents, choose that one
+    for source in sources:
+        if isNan(familyTree.at[source, 'ParentDatasets']):
+            return source
+    print('Error on line 197: Unable to use simple parentage rule to determine \
+            most senior dataset among the following sources: {}. Please contact\
+            a developer to implement handling for more complex cases.'\
+                .format(sources))
+    exit(1)
 
 # Combiner function to handle duplicates
-def combineDups(x):
+def combineDups(x, familyTree):
     # If there's nothing to combine, just pick the first thing
     if len(x) == 1:
         return x.iloc[0]
+    # If we're looking at source datasets
+    if x.name == SOURCE:
+        # Prioritize the oldest ones in the family tree
+        return oldestSource(x, familyTree)
     # If we're not looking at coordinates or a date, just pick the first thing
     if x.name != LAT and x.name != LAT and x.name != AGE:
         return x.iloc[0]
@@ -281,7 +297,7 @@ def handleDuplicates(records):
 
     # If the lab number and the dates match, prioritize entries with lat/long info,
     # but delete entries that have existing mismatching lat/long info
-    records = records.groupby(LAB_ID).agg(combineDups)
+    records = records.groupby(LAB_ID).agg(lambda x: combineDups(x, familyTree))
 
     # Sort records back for algorithms that rely on LAB_ID order
     records = records.sort_values(by=[LAB_ID])
