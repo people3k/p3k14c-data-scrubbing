@@ -10,3 +10,8 @@
 3.  Execute the program by simply running ``python scrub.py`` in the command line.
 
 The program will spit out the clean dataset in a file called ``radiocarbon_scrubbed.csv`` and a list of unknown lab codes in ``unknown_codes.csv``. 
+
+# TODO
+
+The following features are yet to be implemented:
+    * County centroids for US/Canada dates

@@ -286,8 +286,9 @@ def handleDuplicates(records):
     # index index index
     records = records.reset_index()
 
-    # Now, keep an arbitrary duplicate if both the date and precise coordinates match
-    records = records.drop_duplicates(subset=[LAB_ID, AGE, LAT, LON])
+    # Now, keep an arbitrary duplicate if both the date, precise coordinates,
+    # and source datasets match
+    records = records.drop_duplicates(subset=[LAB_ID, AGE, LAT, LON, SOURCE])
 
     # Sort the records by LocAccuracy so that higher LocAccuracy is chosen first
     records = records.sort_values(by=[LOC_ACCURACY], ascending=False)
@@ -369,7 +370,20 @@ def finishScrubbing(records):
 
     return records
 
-def fixEncodingAndSave(records):
+
+
+def fixEncoding(records):
+    print('Ensuring proper encoding for non-Latin characters')
+    cols = [
+      'SiteName','Country','Province','Region','Continent','Source','Reference'
+    ]
+    fixer = lambda x : '' if isNan(x) else ftfy.fix_encoding(x)
+    for col in cols:
+        records[col] = records[col].apply(fixer)
+
+    return records
+
+def save(records):
     outFile = open(OUT_FILE,'w')
     outFile.write(ftfy.fix_text(records.to_csv()))
     outFile.close()
@@ -380,7 +394,8 @@ def main():
     records = convertCoordinates(records)
     records = handleDuplicates(records)
     records = finishScrubbing(records)
-    fixEncodingAndSave(records)
+    records = fixEncoding(records)
+    save(records)
 
 if __name__ == '__main__':
     main()
