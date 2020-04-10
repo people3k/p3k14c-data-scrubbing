@@ -2,6 +2,8 @@ import pandas as pd
 import numpy  as np
 import io
 from tqdm import tqdm
+from sys import stdout
+from math import ceil
 import ftfy
 
 
@@ -21,6 +23,7 @@ FUZZ_FACTOR   = 0.5
 PARENT_CHILD_FILE = 'Parent_Child_Table.csv'
 
 pd.options.mode.chained_assignment = None  # default='warn'
+SHAPE         = (0,0)
 
 # Get a lower-case lab code given a 
 # full lab number.
@@ -44,8 +47,11 @@ def codeFromLabNum(labnum):
 
 # Fetch the raw records
 def getRecords():
+    global SHAPE
     print('Fetching raw records')
-    return pd.read_csv(IN_FILE_PATH, low_memory=False)
+    records = pd.read_csv(IN_FILE_PATH, low_memory=False)
+    SHAPE = records.shape
+    return records
 
 # Fixer function
 def replaceTypo(labNum, actualCode):
@@ -200,8 +206,30 @@ def oldestSource(sources, familyTree):
                 .format(sources))
     exit(1)
 
+# Flush the buffer and print the message
+def flushMsg(msg):
+    stdout.flush()
+    stdout.write('\033[A\r')
+    print(msg)
+ 
+# A function for printing the progress of duplicate handling, since it 
+# is the longest process of the scrubber
+dupsProcessed = 0
+def printProgress():
+    global dupsProcessed
+    dupsProcessed += 1
+    # Every 100 fields
+    if dupsProcessed % 1000 == 0:
+        # Total records processed is the number of entries divided by columns
+        recordsProcessed = dupsProcessed/SHAPE[1]
+        percentComplete  = ceil(recordsProcessed/SHAPE[0]*(400/3))
+        flushMsg('Handling duplicate entries ({}% complete)'\
+                .format(percentComplete))
+
+
 # Combiner function to handle duplicates
 def combineDups(x, familyTree):
+    printProgress()
     # If there's nothing to combine, just pick the first thing
     if len(x) == 1:
         return x.iloc[0]
@@ -372,17 +400,23 @@ def finishScrubbing(records):
 
 
 
+# Fix character encodings mucked up by Excel
 def fixEncoding(records):
-    print('Ensuring proper encoding for non-Latin characters')
+    # A little overkill, but these are all possible columns with proper names
+    # that may have special characters.
     cols = [
       'SiteName','Country','Province','Region','Continent','Source','Reference'
     ]
+    # Simple lambda to handle NaNs
     fixer = lambda x : '' if isNan(x) else ftfy.fix_encoding(x)
-    for col in cols:
+    # Do the thing!
+    for i,col in enumerate(cols):
+        flushMsg('Ensuring proper encoding for non-Latin charactes (step {}/{})'\
+                .format(i+1,len(cols)))
         records[col] = records[col].apply(fixer)
-
     return records
 
+# Save the records to the output file
 def save(records):
     outFile = open(OUT_FILE,'w')
     outFile.write(ftfy.fix_text(records.to_csv()))
