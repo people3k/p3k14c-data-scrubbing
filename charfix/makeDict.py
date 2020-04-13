@@ -1,19 +1,19 @@
 import nltk
+import ftfy
 import os
 
 LATIN_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ\
                abcdefghijklmnopqrstuvwxyz\
                0123456789\
                ±°[]{}\|`~!@#$%^&*()\\-+_=,./<>?:;"\'\
-               ·½\
+               −\x80 \xad ·“”½–’‘:—▼−—\
                '
 
 def tokenize(filename):
         content = open(filename, 'rb').read().decode('utf-8')
         tokens = nltk.word_tokenize(str(content))
-        tokens = [ t.split(',')[0] for t in tokens]
-        uniqueTokens = list(set(tokens))
-        return uniqueTokens
+        tokens = [ ftfy.fix_encoding(t.split(',')[0]) for t in tokens]
+        return tokens
  
 
 def special(token):
@@ -26,14 +26,16 @@ def getSpecials(tokens):
     return [t for t in tokens if special(t)]
  
 def main():
-    i = 0
+    allSpecials = []
     for file in os.listdir('exper/'):
         tokens = tokenize('exper/'+file)
         specials = getSpecials(tokens)
+        allSpecials += specials
         print(specials)
-        i +=1
-        if (i >= 3):
-            exit()
+    allSpecials = ' '.join(allSpecials)
+    with open('specials.txt', 'w') as f:
+        f.write(allSpecials)
+
 
 
 if __name__ == '__main__':
