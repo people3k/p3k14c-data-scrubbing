@@ -34,6 +34,7 @@ def codeFromLabNum(labnum):
          ])\
              .lower()\
              .replace(' ','')\
+             .replace(' ','')\
              .replace('*','')\
              .replace('‐','')\
              .replace('_','')\
@@ -44,6 +45,8 @@ def codeFromLabNum(labnum):
              .replace('/','')\
              .replace('’','')\
              .replace('&','')\
+             .replace('?','')\
+             .replace('?','')\
 
 # Fetch the raw records
 def getRecords():
@@ -95,6 +98,16 @@ def deleteBadLabs(records):
 
     # Fix known typos in lab codes
     records = fixTypos(records)
+
+    # Remove records without any actual numerals
+    hasNumeral = lambda s: True in [n in s for n in '0123456789']
+    records = records[records[LAB_ID].apply(hasNumeral)]
+
+    # Remove records with question marks
+    records = records[records[LAB_ID].apply(lambda s: '?' not in s)]
+
+    # Scrub leading whitespace
+    records[LAB_ID] = records[LAB_ID].apply(lambda s: s.lstrip())
 
     records = records.set_index(LAB_ID)
     return records
