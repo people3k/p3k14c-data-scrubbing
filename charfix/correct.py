@@ -3,30 +3,40 @@ import numpy as np
 import pandas as pd 
 import os.path
 import pickle
+from termcolor import colored
 
-"""
 sym_spell = SymSpell()
 corpus_path = 'specials.txt'
 sym_spell.create_dictionary(corpus_path)
 
-input_term = 'bai'
 
-suggestions = sym_spell.lookup(input_term, Verbosity.CLOSEST)
-
-for suggestion in suggestions:
-    print(suggestion)
-"""
 
 IN_FILE = 'mush.csv'
 COLS = [
       'SiteName','Country','Province','Region','Continent','Source','Reference'
     ]
- 
+
+def printSuggestions(term):
+    term = term.replace('(','').replace(')','')
+    suggestions = sym_spell.lookup(term, Verbosity.CLOSEST)
+    print('Suggestions:')
+    sugs = 0
+    for suggestion in suggestions:
+        sugs += 1
+        if sugs == 10:
+            break
+        print(suggestion)
+    print('')
+
+
 def printContext(anom):
     print('-------------------------------')
     print('{} anomaly:'.format(anom['type']))
-    print(anom['anom'])
+    hiAnom = colored(anom['anom'], 'red', attrs=['bold'])
+    aroundAnom = anom['contexts'][0][anom['type']].split(anom['anom'])
+    print(aroundAnom[0] + hiAnom + aroundAnom[1])
     print('')
+    printSuggestions(anom['anom'])
     print('Context(s):')
     df = pd.DataFrame(anom['contexts'])
     cols = list(set(['LabID','SiteName','Country',anom['type']]))
@@ -96,9 +106,8 @@ def getAnomalies(records):
         # For every potentially anomalous feature type
         for col in COLS:
             datum = records.at[labid, col]
-            stripped = str(datum).replace(' ', '')\
+            stripped = str(datum).replace('-', '')\
                             .replace('\t', '')\
-                            .replace('-', '')\
                             .replace('/', '')\
                             .replace(':', '')\
                             .replace('.', '')\
@@ -115,6 +124,11 @@ def getAnomalies(records):
                             .replace("]", '')\
                             .replace("#", '')\
                             .replace("+", '')\
+                            .replace("%", '')\
+                            .replace("<", '')\
+                            .replace(">", '')\
+                            .replace('»', '')\
+                            .replace('«', '')\
                             .replace("–", '')\
                             .replace(';', '')\
                             .replace('--', '')\
@@ -123,9 +137,11 @@ def getAnomalies(records):
                             .replace(')', '')\
                             .replace('_', '')
             # If it is still not alphanumeric after stripping ordinary symbols
-            if not stripped.isalnum():
-                # Add it to the anomalies
-                anoms = logAnomaly(anoms, datum, col, records.loc[labid])
+            if not stripped.replace(' ','').isalnum():
+                # Add each anomaly
+                for word,stripword in list(zip(datum.split(), stripped.split())):
+                    if not stripword.isalnum():
+                        anoms = logAnomaly(anoms, word, col, records.loc[labid])
     with open('anoms.pickle', 'wb') as f:
         pickle.dump(anoms, f)
     return anoms
@@ -146,6 +162,8 @@ def getData():
 def main():
     # First, scan through the dataset to detect and store each anomaly. 
     records, anoms = getData()
+    anoms = [a for a in anoms if a['type'] != 'Reference']
+    # About 1500 with refs, 3000 with
     # Now, for every anomaly
     for anom in anoms:
         # Prompt the user to fix it
