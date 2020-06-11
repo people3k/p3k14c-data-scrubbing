@@ -5,28 +5,39 @@ import os.path
 import pickle
 from termcolor import colored
 
-sym_spell = SymSpell()
-corpus_path = 'specials.txt'
-sym_spell.create_dictionary(corpus_path)
+sym_spell = SymSpell(max_dictionary_edit_distance=5)
+FIX = {}
 
-
-
-IN_FILE = 'mush.csv'
+IN_FILE = 'dates.csv'
 COLS = [
       'SiteName','Country','Province','Region','Continent','Source','Reference'
     ]
 
+def fetchFixTable():
+    if os.path.isfile('fixes.csv'):
+        print('Loading in existing fix table')
+        return dict(pd.read_csv('fixes.csv'))
+    else:
+        return {}
+
+def saveFixTable():
+    print('Saving fix table')
+    pd.DataFrame(FIX).to_csv('fixes.csv')
+    return
+
+
 def printSuggestions(term):
     term = term.replace('(','').replace(')','')
-    suggestions = sym_spell.lookup(term, Verbosity.CLOSEST)
+    suggestions = sym_spell.lookup(term, Verbosity.CLOSEST, max_edit_distance=5)
     print('Suggestions:')
     sugs = 0
     for suggestion in suggestions:
         sugs += 1
         if sugs == 10:
             break
-        print(suggestion)
+        print(sugs, suggestion.term)
     print('')
+    return suggestions
 
 
 def printContext(anom):
@@ -36,32 +47,46 @@ def printContext(anom):
     aroundAnom = anom['contexts'][0][anom['type']].split(anom['anom'])
     print(aroundAnom[0] + hiAnom + aroundAnom[1])
     print('')
-    printSuggestions(anom['anom'])
+    sugs = printSuggestions(anom['anom'])
     print('Context(s):')
     df = pd.DataFrame(anom['contexts'])
     cols = list(set(['LabID','SiteName','Country',anom['type']]))
     print(df[cols].set_index('LabID').head(10))
+    return sugs
 
 
 # Prompt the user to fix it 
 def prompt(anom):
     # List context and suggestions
-    printContext(anom)
-    lol = input('Select:')
+    suggestions = printContext(anom)
+    print('[#] Suggestion | [M]anual | [I]nclude blank | [E]xit')
+    sel = input('Select:')
     print('')
+    fix = ''
+    fixed = False
     # Prompt to:
-        # [#] Choose suggestion
-            # Prompt to fix [o]nce
-                # Change the data structure in-place
-            # Prompt to fix [a]ll
-                # Add to fix-all dictionary
-        # [F]lag for expert
-            # Change the data-structure in-place
-        # [L]eave alone
-            # Skip
-        # [M]anual entry
-            # Take manual entry
-            # Change structure in-place
+    # Give any number to use the suggestion
+    if sel.isdigit():
+        fix = suggestions[int(sel)-1].term
+        fixed = True
+    # [M]anual entry
+    elif sel.lower() == 'm':
+        fix = input('Manual entry:')
+        fixed = True
+    # [I]nclude blank
+    elif sel.lower() == 'i':
+        fixed = True
+    # [E]xit
+    elif sel.lower() == 'e':
+        saveFixTable()
+        exit()
+    if fixed:
+        FIX[anom['anom']] = {
+            'fix' : fix,
+            'anom' : anom
+        }
+    else:
+        FIX[anom['anom']] = { 'fix' : 'skip' }
     return
 
 # Simple binary search
@@ -148,6 +173,7 @@ def getAnomalies(records):
 
 def fetchAnomalies(records):
     if os.path.isfile('anoms.pickle'):
+        print('Reading in existing table of anomalies (anoms.pickle)...')
         f = open('anoms.pickle', 'rb')
         return pickle.load(f)
     else:
@@ -160,14 +186,21 @@ def getData():
 
 
 def main():
+    FIX = fetchFixTable()
+    print('Loading in correction dictionary (corpus/corpus.txt)...')
+    corpus_path = 'corpus/corpus.txt'
+    sym_spell.create_dictionary(corpus_path)
+
     # First, scan through the dataset to detect and store each anomaly. 
     records, anoms = getData()
-    anoms = [a for a in anoms if a['type'] != 'Reference']
-    # About 1500 with refs, 3000 with
+    anoms = [a for a in anoms if a['type'] == 'SiteName']
+
     # Now, for every anomaly
     for anom in anoms:
-        # Prompt the user to fix it
-        prompt(anom)
+        # If the anom isn't already in the fix table
+        if anom['anom'] not in FIX.keys():
+            # Prompt the user to fix it
+            prompt(anom)
 
 if __name__ == '__main__':
     main()
