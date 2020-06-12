@@ -6,7 +6,7 @@ import pickle
 from termcolor import colored
 
 sym_spell = SymSpell(max_dictionary_edit_distance=5)
-FIX = {}
+FIXES = pd.DataFrame(columns=['fix','anomaly','contexts'])
 
 IN_FILE = 'dates.csv'
 COLS = [
@@ -16,19 +16,20 @@ COLS = [
 def fetchFixTable():
     if os.path.isfile('fixes.csv'):
         print('Loading in existing fix table')
-        return dict(pd.read_csv('fixes.csv'))
+        return pd.read_csv('fixes.csv',index_col = 0)
     else:
-        return {}
+        return FIXES
 
 def saveFixTable():
     print('Saving fix table')
-    pd.DataFrame(FIX).to_csv('fixes.csv')
+    FIXES.to_csv('fixes.csv')
     return
 
 
 def printSuggestions(term):
     term = term.replace('(','').replace(')','')
-    suggestions = sym_spell.lookup(term, Verbosity.CLOSEST, max_edit_distance=5)
+#    suggestions = sym_spell.lookup(term, Verbosity.CLOSEST, max_edit_distance=5)
+    suggestions = []
     print('Suggestions:')
     sugs = 0
     for suggestion in suggestions:
@@ -40,7 +41,7 @@ def printSuggestions(term):
     return suggestions
 
 
-def printContext(anom):
+def getContext(anom):
     print('-------------------------------')
     print('{} anomaly:'.format(anom['type']))
     hiAnom = colored(anom['anom'], 'red', attrs=['bold'])
@@ -57,9 +58,10 @@ def printContext(anom):
 
 # Prompt the user to fix it 
 def prompt(anom):
+    global FIXES
     # List context and suggestions
-    suggestions = printContext(anom)
-    print('[#] Suggestion | [M]anual | [I]nclude blank | [E]xit')
+    suggestions = getContext(anom)
+    print('[#] Suggestion | [M]anual | [F]lag for expert | [S]kip | [E]xit')
     sel = input('Select:')
     print('')
     fix = ''
@@ -71,22 +73,32 @@ def prompt(anom):
         fixed = True
     # [M]anual entry
     elif sel.lower() == 'm':
-        fix = input('Manual entry:')
+        fix = input('Manual entry: ')
         fixed = True
     # [I]nclude blank
-    elif sel.lower() == 'i':
+    elif sel.lower() == 'f':
+        fix = 'NEEDS_EXPERT'
         fixed = True
     # [E]xit
     elif sel.lower() == 'e':
         saveFixTable()
         exit()
-    if fixed:
-        FIX[anom['anom']] = {
-            'fix' : fix,
-            'anom' : anom
-        }
+    # [S]kip
+    elif sel.lower() == 's':
+        fix = 'NO_FIX_NEEDED'
+        fixed = True
     else:
-        FIX[anom['anom']] = { 'fix' : 'skip' }
+        print('Invalid entry; try again')
+        prompt(anom)
+        return
+
+    if fixed:
+        FIXES = FIXES.append(pd.Series({
+            'anomaly' : anom['anom'],
+            'fix' : fix,
+            'contexts' : anom['contexts']
+        }), ignore_index=True)
+
     return
 
 # Simple binary search
@@ -186,19 +198,21 @@ def getData():
 
 
 def main():
-    FIX = fetchFixTable()
+    global FIXES
+    FIXES = fetchFixTable()
     print('Loading in correction dictionary (corpus/corpus.txt)...')
     corpus_path = 'corpus/corpus.txt'
-    sym_spell.create_dictionary(corpus_path)
+    #sym_spell.create_dictionary(corpus_path)
 
     # First, scan through the dataset to detect and store each anomaly. 
     records, anoms = getData()
     anoms = [a for a in anoms if a['type'] == 'SiteName']
+    print(FIXES['anomaly'])
 
     # Now, for every anomaly
     for anom in anoms:
         # If the anom isn't already in the fix table
-        if anom['anom'] not in FIX.keys():
+        if anom['anom'] not in list(FIXES['anomaly']):
             # Prompt the user to fix it
             prompt(anom)
 
