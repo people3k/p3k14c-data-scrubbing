@@ -28,8 +28,7 @@ def saveFixTable():
 
 def printSuggestions(term):
     term = term.replace('(','').replace(')','')
-#    suggestions = sym_spell.lookup(term, Verbosity.CLOSEST, max_edit_distance=5)
-    suggestions = []
+    suggestions = sym_spell.lookup(term, Verbosity.CLOSEST, max_edit_distance=5)
     print('Suggestions:')
     sugs = 0
     for suggestion in suggestions:
@@ -51,8 +50,8 @@ def getContext(anom):
     sugs = printSuggestions(anom['anom'])
     print('Context(s):')
     df = pd.DataFrame(anom['contexts'])
-    cols = list(set(['LabID','SiteName','Country',anom['type']]))
-    print(df[cols].set_index('LabID').head(10))
+    cols = list(set(['SiteName','Country',anom['type']]))
+    print(df[cols].head(10))
     return sugs
 
 
@@ -199,10 +198,18 @@ def getData():
 
 def main():
     global FIXES
+    import sys
+
+    debug = False
+    if len(sys.argv) > 1 and sys.argv[1] == 'debug':
+        print('DEBUG MODE')
+        debug = True
+
     FIXES = fetchFixTable()
     print('Loading in correction dictionary (corpus/corpus.txt)...')
     corpus_path = 'corpus/corpus.txt'
-    #sym_spell.create_dictionary(corpus_path)
+    if not debug:
+        sym_spell.create_dictionary(corpus_path)
 
     # First, scan through the dataset to detect and store each anomaly. 
     records, anoms = getData()
