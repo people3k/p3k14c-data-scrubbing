@@ -60,7 +60,7 @@ def prompt(anom):
     global FIXES
     # List context and suggestions
     suggestions = getContext(anom)
-    print('[#] Suggestion | [M]anual | [F]lag for expert | [S]kip | [E]xit')
+    print('[#] Suggestion | [M]anual | [F]lag for expert | [S]kip | Save [W]ithout Exiting | [E]xit')
     sel = input('Select:')
     print('')
     fix = ''
@@ -78,6 +78,10 @@ def prompt(anom):
     elif sel.lower() == 'f':
         fix = 'NEEDS_EXPERT'
         fixed = True
+    elif sel.lower() == 'w':
+        saveFixTable()
+        prompt(anom)
+        return
     # [E]xit
     elif sel.lower() == 'e':
         saveFixTable()
@@ -175,7 +179,7 @@ def getAnomalies(records):
             # If it is still not alphanumeric after stripping ordinary symbols
             if not stripped.replace(' ','').isalnum():
                 # Add each anomaly
-                tokenize = lambda s : s.replace('-',' ').split()
+                tokenize = lambda s : s.replace('-',' ').replace('(',' ').replace(')',' ').replace('_',' ').split()
                 for word,stripword in list(zip(tokenize(datum), tokenize(stripped))):
                     if not stripword.isalnum():
                         anoms = logAnomaly(anoms, word, col, records.loc[labid])
@@ -222,7 +226,14 @@ def main():
         # If the anom isn't already in the fix table
         if anom['anom'] not in list(FIXES['anomaly']):
             # Prompt the user to fix it
-            prompt(anom)
+            try:
+                prompt(anom)
+            except KeyboardInterrupt:
+                print('Interrupted.')
+                saveFixTable()
+                exit()
+
 
 if __name__ == '__main__':
     main()
+
