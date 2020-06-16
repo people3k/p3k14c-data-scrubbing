@@ -28,7 +28,7 @@ def saveFixTable():
 
 def printSuggestions(term):
     term = term.replace('(','').replace(')','')
-    suggestions = sym_spell.lookup(term, Verbosity.CLOSEST, max_edit_distance=5)
+    suggestions = sym_spell.lookup(term, Verbosity.CLOSEST, max_edit_distance=5, transfer_casing=True)
     print('Suggestions:')
     sugs = 0
     for suggestion in suggestions:
@@ -175,7 +175,8 @@ def getAnomalies(records):
             # If it is still not alphanumeric after stripping ordinary symbols
             if not stripped.replace(' ','').isalnum():
                 # Add each anomaly
-                for word,stripword in list(zip(datum.split(), stripped.split())):
+                tokenize = lambda s : s.replace('-',' ').split()
+                for word,stripword in list(zip(tokenize(datum), tokenize(stripped))):
                     if not stripword.isalnum():
                         anoms = logAnomaly(anoms, word, col, records.loc[labid])
     with open('anoms.pickle', 'wb') as f:
