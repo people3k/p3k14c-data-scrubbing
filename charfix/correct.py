@@ -8,7 +8,7 @@ from termcolor import colored
 sym_spell = SymSpell(max_dictionary_edit_distance=5)
 FIXES = pd.DataFrame(columns=['fix','anomaly','contexts'])
 
-IN_FILE = 'dates.csv'
+IN_FILE = 'fixedDates.csv'
 COLS = [
       'SiteName','Country','Province','Region','Continent','Source','Reference'
     ]
@@ -68,8 +68,13 @@ def prompt(anom):
     # Prompt to:
     # Give any number to use the suggestion
     if sel.isdigit():
-        fix = suggestions[int(sel)-1].term
-        fixed = True
+        if int(sel) > len(suggestions):
+            print('Invalid selection; try again')
+            prompt(anom)
+            return
+        else:
+            fix = suggestions[int(sel)-1].term
+            fixed = True
     # [M]anual entry
     elif sel.lower() == 'm':
         fix = input('Manual entry: ')
