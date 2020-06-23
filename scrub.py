@@ -20,7 +20,6 @@ STD_DEV       = 'Sd'
 LOC_ACCURACY  = 'LocAccuracy'
 SOURCE        = 'Source'
 FUZZ_FACTOR   = 0.5
-PARENT_CHILD_FILE = 'Parent_Child_Table.csv'
 
 pd.options.mode.chained_assignment = None  # default='warn'
 SHAPE         = (0,0)
@@ -241,15 +240,15 @@ def printProgress():
 
 
 # Combiner function to handle duplicates
-def combineDups(x, familyTree):
+def combineDups(x):
     printProgress()
     # If there's nothing to combine, just pick the first thing
     if len(x) == 1:
         return x.iloc[0]
     # If we're looking at source datasets
     if x.name == SOURCE:
-        # Prioritize the oldest ones in the family tree
-        return oldestSource(x, familyTree)
+       # Concatenate all sources together
+       return ', '.join(x)
     # If we're not looking at coordinates or a date, just pick the first thing
     if x.name != LAT and x.name != LAT and x.name != AGE:
         return x.iloc[0]
@@ -310,16 +309,6 @@ def includeAllParents(table):
         )
     return table
 
-# Get the parent child tree and include recursive info for all parents
-def getParentChildTree():
-    table = pd.read_csv(PARENT_CHILD_FILE, index_col=0)
-    # Convert strings to list
-    table['ParentDatasets'] = table['ParentDatasets'].apply(lambda s:
-            np.nan if isNan(s) else list(map(lambda i: i.strip(), s.split(',')))
-            )
-    table = includeAllParents(table)
-    return table
- 
 # Deal with entries bearing duplicate lab codes.
 def handleDuplicates(records):
     print('Handling duplicate entries')
@@ -334,12 +323,9 @@ def handleDuplicates(records):
     # Sort the records by LocAccuracy so that higher LocAccuracy is chosen first
     records = records.sort_values(by=[LOC_ACCURACY], ascending=False)
 
-    # Fetch the parent-child tree
-    familyTree = getParentChildTree()
-
     # If the lab number and the dates match, prioritize entries with lat/long info,
     # but delete entries that have existing mismatching lat/long info
-    records = records.groupby(LAB_ID).agg(lambda x: combineDups(x, familyTree))
+    records = records.groupby(LAB_ID).agg(lambda x: combineDups(x))
 
     # Sort records back for algorithms that rely on LAB_ID order
     records = records.sort_values(by=[LAB_ID])
