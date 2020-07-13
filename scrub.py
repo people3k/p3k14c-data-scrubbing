@@ -5,6 +5,7 @@ from tqdm import tqdm
 from sys import stdout
 from math import ceil
 import ftfy
+import reverse_geocoder as rg
 
 
 ## GLOBAL CONSTANTS ##
@@ -19,6 +20,7 @@ AGE           = 'Age'
 STD_DEV       = 'Sd'
 LOC_ACCURACY  = 'LocAccuracy'
 SOURCE        = 'Source'
+PROVINCE      = 'Province'
 FUZZ_FACTOR   = 0.5
 
 pd.options.mode.chained_assignment = None  # default='warn'
@@ -415,19 +417,32 @@ def fixEncoding(records):
         records[col] = records[col].apply(fixer)
     return records
 
+# Guess the province data for entries without it
+def guessProvinceData(records):
+    print('Guessing missing Province data...')
+    GUESSED_PROVINCE = 'Guessed_province'
+    for labID in tqdm(records.index):
+        if isNan(records.at[labID, PROVINCE]):
+            guess = 'lol'
+            records.at[labID, GUESSED_PROVINCE] = guess
+    return records
+
 # Save the records to the output file
 def save(records):
+    print('Exporting...')
     outFile = open(OUT_FILE,'w')
     outFile.write(ftfy.fix_text(records.to_csv()))
     outFile.close()
 
 def main():
-    records = getRecords()
-    records = deleteBadLabs(records)
-    records = convertCoordinates(records)
-    records = handleDuplicates(records)
-    records = finishScrubbing(records)
-    records = fixEncoding(records)
+    #records = getRecords()
+    #records = deleteBadLabs(records)
+    #records = convertCoordinates(records)
+    #records = handleDuplicates(records)
+    #records = finishScrubbing(records)
+    #records = fixEncoding(records)
+    records = pd.read_csv('radiocarbon_scrubbed.csv')
+    records = guessProvinceData(records)
     save(records)
 
 if __name__ == '__main__':
