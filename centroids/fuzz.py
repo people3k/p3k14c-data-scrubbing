@@ -113,7 +113,8 @@ def getInfo(lon, lat):
             fips = all_US_records[i][4]
             county = all_US_records[i][5]
             state = abbrev_us_state[centroids.at[fips, 'State']]
-            return county,state
+            centroid = (boundary.centroid.x, boundary.centroid.y)
+            return county,state,centroid
     # Then try CA shapes. Be sure to convert to easting/northing first.
     easting,northing = CAconv(lon,lat)
     CA_point = Point((easting,northing))
@@ -122,12 +123,13 @@ def getInfo(lon, lat):
         if CA_point.within(boundary):
             census_division = all_CA_records[i][1]
             province = all_CA_records[i][4]
-            return census_division,province
+            centroid = CAconv(boundary.centroid.x,boundary.centroid.y,inverse=True)
+            return census_division,province,centroid
 
 lat,lon = 54.596093, -104.966212
 
-subdiv,div = getInfo(lon,lat)
-print('The point is in {}, {}'.format(subdiv,div))
+subdiv,div,centroid = getInfo(lon,lat)
+print('The point is in {}, {}. The region centroid is {}'.format(subdiv,div,centroid))
 
 #records = pd.read_csv('radiocarbon_scrubbed.csv',index_col=0)
 #
