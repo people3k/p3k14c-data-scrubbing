@@ -5,7 +5,7 @@ from tqdm import tqdm
 from sys import stdout
 from math import ceil
 import ftfy
-import reverse_geocoder as rg
+from centroids.fuzz import getUSInfo, getCAInfo
 
 
 ## GLOBAL CONSTANTS ##
@@ -399,8 +399,6 @@ def finishScrubbing(records):
 
     return records
 
-
-
 # Fix character encodings mucked up by Excel
 def fixEncoding(records):
     # A little overkill, but these are all possible columns with proper names
@@ -417,14 +415,46 @@ def fixEncoding(records):
         records[col] = records[col].apply(fixer)
     return records
 
-# Guess the province data for entries without it
-def guessProvinceData(records):
-    print('Guessing missing Province data...')
-    GUESSED_PROVINCE = 'Guessed_province'
-    for labID in tqdm(records.index):
-        if isNan(records.at[labID, PROVINCE]):
-            guess = 'lol'
-            records.at[labID, GUESSED_PROVINCE] = guess
+# Fill in the county+state/division+province info for US and Canada dates
+def fillInCountyInfo(records):
+    # Fetch a slice of only NA records for reference purposes
+    NArecs = pd.DataFrame(records[records['Country'].isin(['USA', 'Canada'])])
+
+    # NaNs can screw with our libraries, so set them to (0,0) (clearly not in NA)
+    NArecs['Lat'] = NArecs['Lat'].fillna(0)
+    NArecs['Long'] = NArecs['Long'].fillna(0)
+
+    print('Filling in county/division and state/province info for US/Canada dates...')
+
+    # For every record
+    for i, labID in tqdm(enumerate(NArecs.index), total=NArecs.shape[0]):
+         # Get its lat and lon
+        lat, lon = NArecs.at[labID, 'Lat'],NArecs.at[labID, 'Long']
+        # Do nothing if the coordinates are 0 (null)
+        if lat == 0 and lon == 0:
+            continue
+        # Fetch the region/subregion name
+        if NArecs.at[labID, 'Country'] == 'USA':
+    #        try:
+                subdiv,div,centroid = getUSInfo(lon,lat)
+    #        except:
+    #            print('')
+    #            print('AMERICAN EXCEPTION')
+    #            print(lat,lon)
+    #            exit()
+        else:
+    #        try:
+                subdiv,div,centroid = getCAInfo(lon,lat)
+    #        except:
+    #            print('')
+    #            print('Canadian exception')
+    #            print(lat,lon)
+    #            exit()
+        # Set the original record's names
+        records.at[labID, 'Lat'] = cLat
+        records.at[labID, 'Long'] = cLon
+
+
     return records
 
 # Save the records to the output file
@@ -442,7 +472,7 @@ def main():
     #records = finishScrubbing(records)
     #records = fixEncoding(records)
     records = pd.read_csv('radiocarbon_scrubbed.csv')
-    records = guessProvinceData(records)
+    records = fillInCountyInfo(records)
     save(records)
 
 if __name__ == '__main__':
