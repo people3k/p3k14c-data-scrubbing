@@ -1,53 +1,147 @@
-import reverse_geocoder as rg
-import addfips; af = addfips.AddFIPS()
-import pandas as pd 
+import shapefile
+from shapely.geometry import Point
+from shapely.geometry import shape
+import matplotlib.pyplot as plt
+import pandas as pd
+from pyproj import Proj
 
-print('Loading information...')
+# Dictionary  of US state/territory codes
+us_state_abbrev = {
+    'Alabama': 'AL',
+    'Alaska': 'AK',
+    'American Samoa': 'AS',
+    'Arizona': 'AZ',
+    'Arkansas': 'AR',
+    'California': 'CA',
+    'Colorado': 'CO',
+    'Connecticut': 'CT',
+    'Delaware': 'DE',
+    'District of Columbia': 'DC',
+    'Florida': 'FL',
+    'Georgia': 'GA',
+    'Guam': 'GU',
+    'Hawaii': 'HI',
+    'Idaho': 'ID',
+    'Illinois': 'IL',
+    'Indiana': 'IN',
+    'Iowa': 'IA',
+    'Kansas': 'KS',
+    'Kentucky': 'KY',
+    'Louisiana': 'LA',
+    'Maine': 'ME',
+    'Maryland': 'MD',
+    'Massachusetts': 'MA',
+    'Michigan': 'MI',
+    'Minnesota': 'MN',
+    'Mississippi': 'MS',
+    'Missouri': 'MO',
+    'Montana': 'MT',
+    'Nebraska': 'NE',
+    'Nevada': 'NV',
+    'New Hampshire': 'NH',
+    'New Jersey': 'NJ',
+    'New Mexico': 'NM',
+    'New York': 'NY',
+    'North Carolina': 'NC',
+    'North Dakota': 'ND',
+    'Northern Mariana Islands':'MP',
+    'Ohio': 'OH',
+    'Oklahoma': 'OK',
+    'Oregon': 'OR',
+    'Pennsylvania': 'PA',
+    'Puerto Rico': 'PR',
+    'Rhode Island': 'RI',
+    'South Carolina': 'SC',
+    'South Dakota': 'SD',
+    'Tennessee': 'TN',
+    'Texas': 'TX',
+    'Utah': 'UT',
+    'Vermont': 'VT',
+    'Virgin Islands': 'VI',
+    'Virginia': 'VA',
+    'Washington': 'WA',
+    'West Virginia': 'WV',
+    'Wisconsin': 'WI',
+    'Wyoming': 'WY'
+}
 
-# Load in the county centroids as a dataframe
-centroids = pd.read_csv('centroids.csv',index_col=2)
+# Reversed version of the dictionary
+abbrev_us_state = dict(map(reversed, us_state_abbrev.items()))
 
-# Load in the records to be fuzzed
+US_shp = shapefile.Reader('cb_2018_us_county_500k.shp')
+all_US_shapes  = [shape(b) for b in US_shp.shapes()]
+all_US_records = US_shp.records()
+
+CA_shp = shapefile.Reader('lcd_000a16a_e.shp', encoding='Latin-1')
+all_CA_shapes  = [shape(b) for b in CA_shp.shapes()]
+all_CA_records = CA_shp.records()
+
+# Canadian data projection info from the reference guide (p2-160-g2016002-eng.pdf) pg 25
+CAconv = Proj(
+        proj='lcc', # Projection: Lambert Conformal Conic
+        datum='NAD83', # Datum: North American 1983
+        lat_1=49.0, # First standard parallel
+        lat_2=77.0, # Second standard parallel
+        lon_0=-91.866667, # Longitude of projection center
+        lat_0=63.390675, # Latitude of projection center
+        x_0=6200000.0, # False easting
+        y_0=3000000.0 # False northing
+       )
+
+#x,y=8395429.268569998,1661955.754285
+#
+#lon,lat = CAconv(x,y, inverse=True)
+#print(lon,lat)
+#
+#
+#lat,lon= 43.741686, -79.387622
+#
+#exit()
+
+
+
+centroids = pd.read_csv('centroids.csv').set_index('FIPS')
+
+
+# Fetch the county FIPS and name
+def getCounty(lon, lat):
+    # First try US shapes
+    US_point = Point((lon,lat))
+    for i in range(len(all_US_shapes)):
+        boundary = all_US_shapes[i]
+        if US_point.within(boundary):
+            fips = all_US_records[i][4]
+            name = all_US_records[i][5]
+            return int(fips),name,True
+    # Then try CA shapes
+    easting,northing = CAconv(lon,lat)
+    CA_point = Point((easting,northing))
+    for i in range(len(all_CA_shapes)):
+        boundary = all_CA_shapes[i]
+        if CA_point.within(boundary):
+            print(all_CA_records[i])
+            exit()
+
+def getInfo(lon, lat):
+    fips, name, us = getCounty(lon, lat)
+    if us:
+        state = abbrev_us_state[centroids.at[fips, 'State']]
+    else:
+        state = 'Canada'
+    return fips,name,state
+
+# (LON, LAT)
+# Park City
+point = (-111.495866, 40.644094)
+# Toronto
+point = (-79.442050,43.685733)
+
+fips,county,state = getInfo(point[0], point[1])
+print('The point is in {}, {} (FIPS {})'.format(county,state,fips))
+
 records = pd.read_csv('radiocarbon_scrubbed.csv',index_col=0)
 
-# Fetch a slice of only NA records for reference purposes
-NArecs  = pd.DataFrame(records[records['Country'].isin(['USA'])])
-# NaNs can screw with our libraries, so set them to (0,0) (clearly not in NA)
-NArecs['Lat'] = NArecs['Lat'].fillna(0)
-NArecs['Long'] = NArecs['Long'].fillna(0)
+NArecords = pd.DataFrame(records[records['Country'].isin(['USA'])])
 
-# Construct the coordinate list suited to reverse_geocoder's tastes
-NAcoords = list(zip(list(NArecs['Lat']),list(NArecs['Long'])))
 
-# Fetch county information for every coordinate
-NAdata = rg.search(NAcoords)
 
-print('Converting NA coordinates to county centroids...')
-
-# For every record
-for i, labid in enumerate(NArecs.index):
-    # Get its lat and long
-    lat,long = NArecs.at[labid, 'Lat'],NArecs.at[labid, 'Long']
-    # Get its state and county information
-    data     = NAdata[i]
-    state    = data['admin1']
-    county   = data['admin2']
-    # Fetch its FIPS code
-    fips     = af.get_county_fips(county, state=state)
-
-    try:
-        # Try accessing the county centroid for its county.
-        centroidLat  = centroids.at[int(fips), 'Lat']
-        centroidLong = centroids.at[int(fips), 'Long']
-    except:
-        # If that fails, its because there's no coordinate info; set to 0
-        centroidLat,centroidLong = 0,0
-
-    # If coordinate info was successfully converted to a county centroid
-    if centroidLat != 0 and centroidLong != 0:
-        # Set the original record's coordinates to the county centroid
-        records.at[labid, 'Lat'] = centroidLat
-        records.at[labid, 'Lat'] = centroidLong
-
-print('Exporting...')
-records.to_csv('radiocarbon_scrubbed_and_fuzzed.csv')
