@@ -103,45 +103,35 @@ CAconv = Proj(
 centroids = pd.read_csv('centroids.csv').set_index('FIPS')
 
 
-# Fetch the county FIPS and name
-def getCounty(lon, lat):
+# Fetch the names of the division and subdivions for the given point
+def getInfo(lon, lat):
     # First try US shapes
     US_point = Point((lon,lat))
     for i in range(len(all_US_shapes)):
         boundary = all_US_shapes[i]
         if US_point.within(boundary):
             fips = all_US_records[i][4]
-            name = all_US_records[i][5]
-            return int(fips),name,True
-    # Then try CA shapes
+            county = all_US_records[i][5]
+            state = abbrev_us_state[centroids.at[fips, 'State']]
+            return county,state
+    # Then try CA shapes. Be sure to convert to easting/northing first.
     easting,northing = CAconv(lon,lat)
     CA_point = Point((easting,northing))
     for i in range(len(all_CA_shapes)):
         boundary = all_CA_shapes[i]
         if CA_point.within(boundary):
-            print(all_CA_records[i])
-            exit()
+            census_division = all_CA_records[i][1]
+            province = all_CA_records[i][4]
+            return census_division,province
 
-def getInfo(lon, lat):
-    fips, name, us = getCounty(lon, lat)
-    if us:
-        state = abbrev_us_state[centroids.at[fips, 'State']]
-    else:
-        state = 'Canada'
-    return fips,name,state
+lat,lon = 54.596093, -104.966212
 
-# (LON, LAT)
-# Park City
-point = (-111.495866, 40.644094)
-# Toronto
-point = (-79.442050,43.685733)
+subdiv,div = getInfo(lon,lat)
+print('The point is in {}, {}'.format(subdiv,div))
 
-fips,county,state = getInfo(point[0], point[1])
-print('The point is in {}, {} (FIPS {})'.format(county,state,fips))
-
-records = pd.read_csv('radiocarbon_scrubbed.csv',index_col=0)
-
-NArecords = pd.DataFrame(records[records['Country'].isin(['USA'])])
+#records = pd.read_csv('radiocarbon_scrubbed.csv',index_col=0)
+#
+#NArecords = pd.DataFrame(records[records['Country'].isin(['USA'])])
 
 
 
