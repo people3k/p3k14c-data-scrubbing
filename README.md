@@ -11,7 +11,7 @@
 
 The program will spit out the clean dataset in a file called ``radiocarbon_scrubbed.csv`` and a list of unknown lab codes in ``unknown_codes.csv``. 
 
-# TODO
 
-The following features are yet to be implemented:
-    * County centroids for US/Canada dates
+# Independent "remove duplicates" feature
+
+If you need to remove duplicate records from a certain dataset without necessarily running the entire scrubbing process on it, this is achievable through ``removeDuplicates.py``. Simply run ``python removeDuplicates.py infile_name.csv outfile_name.csv`` and the program will run only the duplicate removal subroutine on ``infile_name.csv`` and save the resulting dataset to ``outfile_name.csv``.
