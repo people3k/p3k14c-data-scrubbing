@@ -2,29 +2,14 @@ import pandas as pd
 import numpy  as np
 import io
 from tqdm import tqdm
-from sys import stdout
 from math import ceil
 import ftfy
 from centroids.fuzz import getUSInfo, getCAInfo
+from common import getRecords, IN_FILE_PATH, FILE_NAME, OUT_FILE, LAB_ID, LAB_CODE_FILE, LAT, LON, AGE, STD_DEV, LOC_ACCURACY, SOURCE, PROVINCE, FUZZ_FACTOR, flushMsg
+from removeDuplicates import handleDuplicates
 
-
-## GLOBAL CONSTANTS ##
-IN_FILE_PATH  = 'radiocarbon_raw.csv'
-FILE_NAME     = 'radiocarbon_raw.csv'
-OUT_FILE      = 'radiocarbon_scrubbed.csv'
-LAB_ID        = 'LabID'
-LAB_CODE_FILE = 'Labs.csv'
-LAT           = 'Lat'
-LON           = 'Long'
-AGE           = 'Age'
-STD_DEV       = 'Sd'
-LOC_ACCURACY  = 'LocAccuracy'
-SOURCE        = 'Source'
-PROVINCE      = 'Province'
-FUZZ_FACTOR   = 0.5
 
 pd.options.mode.chained_assignment = None  # default='warn'
-SHAPE         = (0,0)
 
 # Get a lower-case lab code given a 
 # full lab number.
@@ -48,14 +33,6 @@ def codeFromLabNum(labnum):
              .replace('&','')\
              .replace('?','')\
              .replace('?','')\
-
-# Fetch the raw records
-def getRecords():
-    global SHAPE
-    print('Fetching raw records')
-    records = pd.read_csv(IN_FILE_PATH, low_memory=False)
-    SHAPE = records.shape
-    return records
 
 # Fixer function
 def replaceTypo(labNum, actualCode):
@@ -178,36 +155,6 @@ def convertCoordinates(records):
     records[LON] = records[LON].apply(convertLon)
     return records
 
-# Input:   x - pandas series, potentially containing different types.
-# Output:  A list of those entries that are both valid coordinates
-#          and not NaN 
-def getNonNans(x):
-    nonNans = []
-    for item in x:
-        try:
-            num = float(item)
-            if not np.isnan(num):
-                nonNans.append(num)
-        except:
-            continue
-
-    return nonNans
-
-# Input:  a list of numbers
-# Output: A boolean indicating:
-#           False - Every number in the list is within 0.5 of each other
-#           True  - The list contains numbers with a larger difference than 0.5
-def mismatchingEntries(nums, fuzzFactor=FUZZ_FACTOR):
-    # Calculate all magnitude differenes
-    for i in nums:
-        for j in nums:
-            # If the magnitude of any difference is larger than the allowed
-            # margins, the data is mismatched
-            if np.abs(i-j) > fuzzFactor:
-                return True
-    # No mismatched data => matching data
-    return False
-
 # Given a list of at least two sources, choose the older one from the tree.
 def oldestSource(sources, familyTree):
     # Quite simply, if the source has no parents, choose that one
@@ -219,60 +166,6 @@ def oldestSource(sources, familyTree):
             a developer to implement handling for more complex cases.'\
                 .format(sources))
     exit(1)
-
-# Flush the buffer and print the message
-def flushMsg(msg):
-    stdout.flush()
-    stdout.write('\033[A\r')
-    print(msg)
- 
-# A function for printing the progress of duplicate handling, since it 
-# is the longest process of the scrubber
-dupsProcessed = 0
-def printProgress():
-    global dupsProcessed
-    dupsProcessed += 1
-    # Every 100 fields
-    if dupsProcessed % 1000 == 0:
-        # Total records processed is the number of entries divided by columns
-        recordsProcessed = dupsProcessed/SHAPE[1]
-        percentComplete  = ceil(recordsProcessed/SHAPE[0]*(400/3))
-        flushMsg('Handling duplicate entries ({}% complete)'\
-                .format(percentComplete))
-
-
-# Combiner function to handle duplicates
-def combineDups(x):
-    printProgress()
-    # If there's nothing to combine, just pick the first thing
-    if len(x) == 1:
-        return x.iloc[0]
-    # If we're looking at source datasets
-    if x.name == SOURCE:
-       # Concatenate all sources together
-       return ', '.join(x)
-    # If we're not looking at coordinates or a date, just pick the first thing
-    if x.name != LAT and x.name != LAT and x.name != AGE:
-        return x.iloc[0]
-    # If we're looking at a date and dates don't match, we have a bad entry.
-    if x.name == AGE and mismatchingEntries(list(x),fuzzFactor=1):
-        return 'BADENTRY'
-    # Otherwise, we have coordinates.
-    # Get a list of non-nan entries
-    nonNans = getNonNans(x) 
-    # If the list is empty, return nan
-    if len(nonNans) == 0:
-        return np.nan
-    # If the list contains mismatching entries, return BADENTRY
-    if mismatchingEntries(nonNans):
-        return 'BADENTRY'
-    # Otherwise, get the first coordinate in the list of nonNans
-    firstCoord = nonNans[0]
-    # If that first coordinate is a 0, return nan
-    if firstCoord == 0:
-        return np.nan
-    # Otherwise, return the first coordinate
-    return firstCoord
 
 # A magical function that is infinitely and arcanely more powerful than np.isnan
 def isNan(thing):
@@ -310,35 +203,6 @@ def includeAllParents(table):
             parentList if isNan(parentList) else parentList + getPrevGen(table,parentList)
         )
     return table
-
-# Deal with entries bearing duplicate lab codes.
-def handleDuplicates(records):
-    print('Handling duplicate entries')
-    # Reset index so we can index by the index
-    # index index index
-    records = records.reset_index()
-
-    # Now, keep an arbitrary duplicate if both the date, precise coordinates,
-    # and source datasets match
-    records = records.drop_duplicates(subset=[LAB_ID, AGE, LAT, LON, SOURCE])
-
-    # Sort the records by LocAccuracy so that higher LocAccuracy is chosen first
-    records = records.sort_values(by=[LOC_ACCURACY], ascending=False)
-
-    # If the lab number and the dates match, prioritize entries with lat/long info,
-    # but delete entries that have existing mismatching lat/long info
-    records = records.groupby(LAB_ID).agg(lambda x: combineDups(x))
-
-    # Sort records back for algorithms that rely on LAB_ID order
-    records = records.sort_values(by=[LAB_ID])
-
-    # Filter out bad entries
-    records = records[\
-          (records[LAT] != 'BADENTRY')\
-        & (records[LON] != 'BADENTRY')\
-        & (records[AGE] != 'BADENTRY')]
-
-    return records
 
 # Janky function to see if a given object is a round number
 # (Accepts strings and other weird things too)
@@ -435,24 +299,23 @@ def fillInCountyInfo(records):
             continue
         # Fetch the region/subregion name
         if NArecs.at[labID, 'Country'] == 'USA':
-    #        try:
+           try:
                 subdiv,div,centroid = getUSInfo(lon,lat)
-    #        except:
-    #            print('')
-    #            print('AMERICAN EXCEPTION')
-    #            print(lat,lon)
-    #            exit()
+           except:
+                print('')
+                print('AMERICAN EXCEPTION')
+                print(lat,lon)
+                exit()
         else:
-    #        try:
-                subdiv,div,centroid = getCAInfo(lon,lat)
-    #        except:
-    #            print('')
-    #            print('Canadian exception')
-    #            print(lat,lon)
-    #            exit()
+            try:
+               subdiv,div,centroid = getCAInfo(lon,lat)
+            except:
+                print('')
+                print('Canadian exception')
+                print(lat,lon)
+                exit()
         # Set the original record's names
-        records.at[labID, 'Lat'] = cLat
-        records.at[labID, 'Long'] = cLon
+        records.at[labID, 'guessed_subprovince'] = subdiv
 
 
     return records
@@ -465,12 +328,12 @@ def save(records):
     outFile.close()
 
 def main():
-    #records = getRecords()
-    #records = deleteBadLabs(records)
-    #records = convertCoordinates(records)
-    #records = handleDuplicates(records)
-    #records = finishScrubbing(records)
-    #records = fixEncoding(records)
+    records = getRecords(IN_FILE_PATH)
+    records = deleteBadLabs(records)
+    records = convertCoordinates(records)
+    records = handleDuplicates(records)
+    records = finishScrubbing(records)
+    records = fixEncoding(records)
     records = pd.read_csv('radiocarbon_scrubbed.csv')
     records = fillInCountyInfo(records)
     save(records)
