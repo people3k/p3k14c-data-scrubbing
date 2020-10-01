@@ -125,11 +125,16 @@ def getUSInfo(lon, lat):
             county = all_US_records[i][5]
             state = abbrev_us_state[centroids.at[int(fips), 'State']]
             centroid = (boundary.centroid.x, boundary.centroid.y)
-            return centroid
+            return county,state,centroid
     # If that didn't work, just pick the closest shape.
     # Computationally expensive, but, hey, we've got time.
     closest_county = min(all_US_shapes, key=US_point.distance)
-    return getUSInfo(closest_county.centroid.x, closest_county.centroid.y)
+    i = all_US_shapes.index(closest_county)
+    fips = all_US_records[i][4]
+    county = all_US_records[i][5]
+    state = abbrev_us_state[centroids.at[int(fips), 'State']]
+    centroid = (boundary.centroid.x, boundary.centroid.y)
+    return county,state,centroid
 
 # Same function as above, but for Canada.
 def getCAInfo(lon,lat):
@@ -142,10 +147,15 @@ def getCAInfo(lon,lat):
             census_division = all_CA_records[i][1]
             province = all_CA_records[i][4]
             centroid = CAconv(boundary.centroid.x,boundary.centroid.y,inverse=True)
-            return centroid
+            return census_division,province,centroid
     # If that didn't work, just pick the closest shape.
     closest_division = min(all_CA_shapes, key=CA_point.distance)
-    return getCAInfo(closest_division.centroid.x, closest_division.centroid.y)
+    i = all_CA_shapes.index(closest_division)
+    census_division = all_CA_records[i][1]
+    province = all_CA_records[i][4]
+    centroid = CAconv(boundary.centroid.x,boundary.centroid.y,inverse=True)
+    return census_division,province,centroid
+ 
 
 #lat,lon = 41.6666, -71.383333
 #
@@ -181,7 +191,7 @@ if __name__ == '__main__':
                 county,state,centroid = getUSInfo(lon,lat)
     #        except:
     #            print('')
-    #            print('AMERICAN EXCEPTION')
+    #            print('American exception(alism)')
     #            print(lat,lon)
     #            exit()
         else:
