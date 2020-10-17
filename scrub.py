@@ -323,7 +323,7 @@ def fillInCountyInfo(records):
 # Save the records to the output file
 def save(records):
     print('Exporting...')
-    outFile = open(OUT_FILE,'w')
+    outFile = open(OUT_FILE,'w',encoding='utf-8')
     outFile.write(ftfy.fix_text(records.to_csv()))
     outFile.close()
 
