@@ -125,7 +125,7 @@ if __name__ == '__main__':
     outFileName = sys.argv[2]
     records = getRecords(inFile)
     records = handleDuplicates(records)
-    with open(outFileName, 'w') as f:
+    with open(outFileName, 'w', encoding='utf-8') as f:
         f.write(records.to_csv())
         f.close()
         print('Written to {}'.format(outFileName))
