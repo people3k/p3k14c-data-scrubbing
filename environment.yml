@@ -9,3 +9,7 @@ dependencies:
     - numpy
     - tqdm
     - ftfy
+    - pyshp
+    - shapely
+    - matplotlib
+    - pyproj

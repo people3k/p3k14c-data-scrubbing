@@ -268,7 +268,7 @@ def fixEncoding(records):
     # A little overkill, but these are all possible columns with proper names
     # that may have special characters.
     cols = [
-      'SiteName','Country','Province','Region','Continent','Source','Reference'
+      'SiteName','Country','Province','Continent','Source','Reference'
     ]
     # Simple lambda to handle NaNs
     fixer = lambda x : '' if isNan(x) else ftfy.fix_encoding(x)
@@ -334,7 +334,6 @@ def main():
     records = handleDuplicates(records)
     records = finishScrubbing(records)
     records = fixEncoding(records)
-    records = pd.read_csv('radiocarbon_scrubbed.csv')
     records = fillInCountyInfo(records)
     save(records)
 
