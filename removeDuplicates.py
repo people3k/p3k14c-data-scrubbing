@@ -1,40 +1,62 @@
 import pandas as pd
 import numpy as np
 from math import ceil
-from common import getRecords, LAB_ID, LAB_CODE_FILE, LAT, LON, AGE, STD_DEV, LOC_ACCURACY, SOURCE, PROVINCE, FUZZ_FACTOR, flushMsg
+from common import getRecords, LAB_ID, LAB_CODE_FILE, LAT, LON, AGE, STD_DEV, LOC_ACCURACY, SOURCE, PROVINCE, FUZZ_FACTOR, flushMsg, setMinus
 
 SHAPE = (0,0)
 
+
 # Deal with entries bearing duplicate lab codes.
-def handleDuplicates(records):
+def handleDuplicates(records, graveyard=pd.DataFrame()):
     global SHAPE
     SHAPE = records.shape
     print('Handling duplicate entries')
     # Reset index so we can index by the index
     # index index index
     records = records.reset_index()
+    graveyard = graveyard.reset_index()
 
     # Now, keep an arbitrary duplicate if both the date, precise coordinates,
     # and source datasets match
-    records = records.drop_duplicates(subset=[LAB_ID, AGE, LAT, LON, SOURCE])
+    noDups  = records.drop_duplicates(subset=[LAB_ID, AGE, LAT, LON, SOURCE])
+    # Get the duplicate entries and add to the graveyard
+    funeral = setMinus(records, noDups)
+    funeral['removal_reason'] = 'True duplicate'
+    graveyard = graveyard.append(funeral)
+    # Set records to have to duplicates
+    records = noDups
 
     # Sort the records by LocAccuracy so that higher LocAccuracy is chosen first
     records = records.sort_values(by=[LOC_ACCURACY], ascending=False)
 
     # If the lab number and the dates match, prioritize entries with lat/long info,
     # but delete entries that have existing mismatching lat/long info
-    records = records.groupby(LAB_ID).agg(lambda x: combineDups(x))
+    combinedDups = records.groupby(LAB_ID).agg(lambda x: combineDups(x))
+    funeral = setMinus(records, combinedDups)
+    funeral['removal_reason'] = 'Merged with partial duplicates into single record'
+    graveyard = graveyard.append(funeral)
+    records = combinedDups
 
     # Sort records back for algorithms that rely on LAB_ID order
     records = records.sort_values(by=[LAB_ID])
 
+    isMismatched = lambda x: 'MISMATCHED' in str(x)
+    mismatchedCoords = records[records[LAT].apply(isMismatched) | records[LON].apply(isMismatched)]
+    mismatchedCoords['removal_reason'] = 'Duplicate record with mismatching coordinates'
+    graveyard = graveyard.append(mismatchedCoords)
+
+    mismatchedAge = records[records[AGE].apply(isMismatched)]
+    mismatchedAge['removal_reason'] = 'Duplicate record with mismatching age'
+    graveyard = graveyard.append(mismatchedAge)
+
+    
     # Filter out bad entries
     records = records[\
           (records[LAT] != 'BADENTRY')\
         & (records[LON] != 'BADENTRY')\
         & (records[AGE] != 'BADENTRY')]
 
-    return records
+    return records, graveyard
 
 
 # Input:  a list of numbers
@@ -68,7 +90,7 @@ def combineDups(x):
         return x.iloc[0]
     # If we're looking at a date and dates don't match, we have a bad entry.
     if x.name == AGE and mismatchingEntries(list(x),fuzzFactor=1):
-        return 'BADENTRY'
+        return '{} (MISMATCHED)'.format(x)
     # Otherwise, we have coordinates.
     # Get a list of non-nan entries
     nonNans = getNonNans(x) 
@@ -77,7 +99,7 @@ def combineDups(x):
         return np.nan
     # If the list contains mismatching entries, return BADENTRY
     if mismatchingEntries(nonNans):
-        return 'BADENTRY'
+        return '{} (MISMATCHED)'.format(x)
     # Otherwise, get the first coordinate in the list of nonNans
     firstCoord = nonNans[0]
     # If that first coordinate is a 0, return nan
@@ -124,7 +146,7 @@ if __name__ == '__main__':
     inFile = sys.argv[1]
     outFileName = sys.argv[2]
     records = getRecords(inFile)
-    records = handleDuplicates(records)
+    records, _ = handleDuplicates(records)
     with open(outFileName, 'w', encoding='utf-8') as f:
         f.write(records.to_csv())
         f.close()

@@ -14,7 +14,7 @@ from tqdm import tqdm
 from math import ceil
 import ftfy
 from centroids.fuzz import getUSInfo, getCAInfo
-from common import getRecords, LAB_ID, LAB_CODE_FILE, LAT, LON, AGE, STD_DEV, LOC_ACCURACY, SOURCE, PROVINCE, FUZZ_FACTOR, flushMsg
+from common import getRecords, LAB_ID, LAB_CODE_FILE, LAT, LON, AGE, STD_DEV, LOC_ACCURACY, SOURCE, PROVINCE, FUZZ_FACTOR, flushMsg, setMinus
 from removeDuplicates import handleDuplicates
 
 pd.options.mode.chained_assignment = None  # default='warn'
@@ -244,29 +244,53 @@ def isInteger(x):
 def justFloats(x):
     return pd.to_numeric(x, errors='coerce')
 
+# Add a portion of the dataset to the graveyard
+def addBodies(graveyard, records, cleanerRecords, reason):
+    funeral = setMinus(records, cleanerRecords)
+    funeral['removal_reason'] = reason
+    return graveyard.append(funeral)
+
 # Apply miscellaneous cleaning 
-def finishScrubbing(records):
+def finishScrubbing(records, graveyard):
     print('Finishing miscellaneous scrubbing')
     # Remove records with null entries for age and SD
-    records = records.dropna(subset=[AGE, STD_DEV])
+    cleanerRecs = records.dropna(subset=[AGE, STD_DEV])
+    graveyard   = addBodies(graveyard, records, cleanerRecs, 'Null age and error')
+    records     = cleanerRecs
 
     # Remove entries with non-integer entries for age and SD
-    records = records[records[AGE].apply(isInteger)]
-    records = records[records[STD_DEV].apply(isInteger)]
+    cleanerRecs = records[records[AGE].apply(isInteger)]
+    graveyard   = addBodies(graveyard, records, cleanerRecs, 'Non-integer age')
+    records     = cleanerRecs
+
+    cleanerRecs = records[records[STD_DEV].apply(isInteger)]
+    graveyard   = addBodies(graveyard, records, cleanerRecs, 'Non-integer error')
+    records     = cleanerRecs
+
 
     # Explicit convert to int
     records[AGE]     = records[AGE].apply(int)
     records[STD_DEV] = records[STD_DEV].apply(int)
 
     # Remove dates from ~*~THE FUTURE~*~
-    records = records[records[AGE] > 0]
+    cleanerRecs = records[records[AGE] > 0]
+    graveyard   = addBodies(graveyard, records, cleanerRecs, 'Age from the future')
+    records     = cleanerRecs
 
     # Remove StdDevs that are too large for our tastes
-    records = records[(records[STD_DEV] >= 10) & (records[STD_DEV] <= 300)]
-    records = records[records[STD_DEV] <= records[AGE]]
+    cleanerRecs = records[(records[STD_DEV] >= 10) & (records[STD_DEV] <= 300)]
+    graveyard   = addBodies(graveyard, records, cleanerRecs, 'Error too small or too large')
+    records     = cleanerRecs
+
+    cleanerRecs = records[records[STD_DEV] <= records[AGE]]
+    graveyard   = addBodies(graveyard, records, cleanerRecs, 'Error greater than age')
+    records     = cleanerRecs
 
     # Remove records that are too old to be meaningful
-    records = records[records[AGE] <= 43500]
+    cleanerRecs = records[records[AGE] <= 43500]
+    graveyard   = addBodies(graveyard, records, cleanerRecs, 'Record older than 43500 BP')
+    records     = cleanerRecs
+
 
     # Properly format null entries
     records[LAT] = records[LAT].apply(justFloats)
@@ -288,7 +312,7 @@ def finishScrubbing(records):
     records.at['M-1602',        LON ] = np.nan 
     records.at['GaK-3896',      LON ] = np.nan 
 
-    return records
+    return records, graveyard
 
 # Fix character encodings mucked up by Excel
 def fixEncoding(records):
@@ -348,10 +372,13 @@ def fillInCountyInfo(records):
     return records
 
 # Save the records to the output file
-def save(records, outFilePath):
-    print('Exporting...')
+def save(records, outFilePath, fixEncoding=True):
+    print('Exporting {}...'.format(outFilePath))
     outFile = open(outFilePath,'w',encoding='utf-8')
-    outFile.write(ftfy.fix_text(records.to_csv()))
+    if fixEncoding:
+        outFile.write(ftfy.fix_text(records.to_csv()))
+    else:
+        outFile.write(records.to_csv())
     outFile.close()
 
 def main():
@@ -362,8 +389,9 @@ def main():
     graveyard = pd.DataFrame()
     records, graveyard = deleteBadLabs(records, graveyard)
     records = convertCoordinates(records)
-    records = handleDuplicates(records)
-    records = finishScrubbing(records)
+    records, graveyard = handleDuplicates(records, graveyard=graveyard)
+    records, graveyard = finishScrubbing(records, graveyard)
+    save(graveyard, 'graveyard.csv', fixEncoding=False)
     records = fixEncoding(records)
     records = fillInCountyInfo(records)
     save(records, outFilePath)
