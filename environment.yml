@@ -5,10 +5,10 @@ dependencies:
   - python=3.7
   - pip
   - pip:
-    - pandas
     - numpy
-    - tqdm
+    - pandas
     - ftfy
+    - tqdm
     - pyshp
     - shapely
     - matplotlib

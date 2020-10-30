@@ -1,3 +1,12 @@
+import sys
+
+# First of all, check to make sure arugments are being passed properly
+if __name__ == '__main__':
+    if len(sys.argv) != 3:
+        print('Usage:')
+        print('python scrub.py <input_file_name.csv> <output_file_name.csv>')
+        exit(1)
+ 
 import pandas as pd
 import numpy  as np
 import io
@@ -5,7 +14,7 @@ from tqdm import tqdm
 from math import ceil
 import ftfy
 from centroids.fuzz import getUSInfo, getCAInfo
-from common import getRecords, IN_FILE_PATH, FILE_NAME, OUT_FILE, LAB_ID, LAB_CODE_FILE, LAT, LON, AGE, STD_DEV, LOC_ACCURACY, SOURCE, PROVINCE, FUZZ_FACTOR, flushMsg
+from common import getRecords, LAB_ID, LAB_CODE_FILE, LAT, LON, AGE, STD_DEV, LOC_ACCURACY, SOURCE, PROVINCE, FUZZ_FACTOR, flushMsg
 from removeDuplicates import handleDuplicates
 
 
@@ -321,21 +330,22 @@ def fillInCountyInfo(records):
     return records
 
 # Save the records to the output file
-def save(records):
+def save(records, outFilePath):
     print('Exporting...')
-    outFile = open(OUT_FILE,'w',encoding='utf-8')
+    outFile = open(outFilePath,'w',encoding='utf-8')
     outFile.write(ftfy.fix_text(records.to_csv()))
     outFile.close()
 
 def main():
-    records = getRecords(IN_FILE_PATH)
+    inFilePath, outFilePath = sys.argv[1], sys.argv[2]
+    records = getRecords(inFilePath)
     records = deleteBadLabs(records)
     records = convertCoordinates(records)
     records = handleDuplicates(records)
     records = finishScrubbing(records)
     records = fixEncoding(records)
     records = fillInCountyInfo(records)
-    save(records)
+    save(records, outFilePath)
 
 if __name__ == '__main__':
     main()

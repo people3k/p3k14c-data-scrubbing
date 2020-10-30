@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from math import ceil
-from common import getRecords, IN_FILE_PATH, FILE_NAME, OUT_FILE, LAB_ID, LAB_CODE_FILE, LAT, LON, AGE, STD_DEV, LOC_ACCURACY, SOURCE, PROVINCE, FUZZ_FACTOR, flushMsg
+from common import getRecords, LAB_ID, LAB_CODE_FILE, LAT, LON, AGE, STD_DEV, LOC_ACCURACY, SOURCE, PROVINCE, FUZZ_FACTOR, flushMsg
 
 SHAPE = (0,0)
 

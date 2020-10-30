@@ -14,9 +14,6 @@ def flushMsg(msg):
     print(msg)
  
 ## GLOBAL CONSTANTS ##
-IN_FILE_PATH  = 'radiocarbon_raw.csv'
-FILE_NAME     = 'radiocarbon_raw.csv'
-OUT_FILE      = 'radiocarbon_scrubbed.csv'
 LAB_ID        = 'LabID'
 LAB_CODE_FILE = 'Labs.csv'
 LAT           = 'Lat'
