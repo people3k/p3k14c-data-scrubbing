@@ -17,8 +17,9 @@ from centroids.fuzz import getUSInfo, getCAInfo
 from common import getRecords, LAB_ID, LAB_CODE_FILE, LAT, LON, AGE, STD_DEV, LOC_ACCURACY, SOURCE, PROVINCE, FUZZ_FACTOR, flushMsg
 from removeDuplicates import handleDuplicates
 
-
 pd.options.mode.chained_assignment = None  # default='warn'
+
+GRAVEYARD_NAME = 'graveyard.csv'
 
 # Get a lower-case lab code given a 
 # full lab number.
@@ -64,7 +65,7 @@ def fixTypos(records):
 
 # Remove records with unknown lab codes,
 # and generate a list of unknown lab identifiers.
-def deleteBadLabs(records):
+def deleteBadLabs(records, graveyard):
     print('Removing records with unknown lab codes')
     # Read in list of known, unique, lower-case lab codes
     knownCodes = pd.read_csv('Labs.csv')['CODE'].apply(lambda s: s.lower()).unique()
@@ -80,24 +81,41 @@ def deleteBadLabs(records):
 
     print('Saved unknown codes to unknown_codes.csv')
 
+    # Separate out the codes that will be removed for unknown lab codes
+    funeral   = records[~records[LAB_ID].apply(codeFromLabNum).isin(knownCodes)]
+    # Indicate a reason
+    funeral['removal_reason'] = 'Unknown lab ID'
+    # Graveyard's first funeral
+    graveyard = funeral
+
     # Clean dataset to only contain known codes
-    records = records[records[LAB_ID].apply(codeFromLabNum).isin(knownCodes)]
+    records   = records[records[LAB_ID].apply(codeFromLabNum).isin(knownCodes)]
 
     # Fix known typos in lab codes
     records = fixTypos(records)
 
-    # Remove records without any actual numerals
+    # Check for numerals in a string
     hasNumeral = lambda s: True in [n in s for n in '0123456789']
+    # Host another funeral for records without any actual numerals
+    funeral = records[~records[LAB_ID].apply(hasNumeral)]
+    funeral['removal_reason'] = 'Known lab ID but unknown lab code'
+    graveyard = graveyard.append(funeral)
+    # Remove records without any numerals
     records = records[records[LAB_ID].apply(hasNumeral)]
 
     # Remove records with question marks
-    records = records[records[LAB_ID].apply(lambda s: '?' not in s)]
+    fil = lambda s: '?' not in s
+    funeral = records[~records[LAB_ID].apply(fil)]
+    funeral['removal_reason'] = 'Question mark in lab code'
+    graveyard = graveyard.append(funeral)
+    records   = records[records[LAB_ID].apply(fil)]
 
     # Scrub leading whitespace
     records[LAB_ID] = records[LAB_ID].apply(lambda s: s.lstrip())
 
     records = records.set_index(LAB_ID)
-    return records
+    graveyard = graveyard.set_index(LAB_ID)
+    return records, graveyard
 
 
 # Some hot jank 
@@ -339,7 +357,10 @@ def save(records, outFilePath):
 def main():
     inFilePath, outFilePath = sys.argv[1], sys.argv[2]
     records = getRecords(inFilePath)
-    records = deleteBadLabs(records)
+    # Create a database of all removed records to keep track of their reason
+    # for removal
+    graveyard = pd.DataFrame()
+    records, graveyard = deleteBadLabs(records, graveyard)
     records = convertCoordinates(records)
     records = handleDuplicates(records)
     records = finishScrubbing(records)
