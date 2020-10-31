@@ -27,12 +27,48 @@ def handleDuplicates(records, graveyard=pd.DataFrame()):
     records = noDups
 
     # Concatenate source datasets for true duplicates. Requires some trickery.
-    trueDups = records.duplicated(subset=[LAB_ID, AGE, LAT, LON])
+    trueDups = records.duplicated(subset=[LAB_ID, AGE, LAT, LON], keep=False)
     concattedSourceDups = records[trueDups].groupby(LAB_ID).agg(
             lambda x: '; '.join(x) if x.name == SOURCE else x.iloc[0]
     )
     records = records.drop_duplicates(subset=[LAB_ID, AGE, LAT, LON])
     records = records.append(concattedSourceDups.reset_index())
+
+    # Fetch the duplicates found in both UWyomingNSF2019 and CARD
+    dups = records.duplicated(subset=[LAB_ID],keep=False)
+    wyAndCard = (records[dups])[records[dups][SOURCE].apply(lambda x: 'CARD' in str(x) or 'UWyomingNSF2019' in str(x))]
+    # Now, of the duplicated records in both UWyoming and Card, get JUST the Card ones, and remove them.
+    justCard  = wyAndCard[wyAndCard[SOURCE].apply(lambda x: 'CARD' in str(x))]
+    records   = setMinus(records, justCard)
+
+    
+    # It's time to mess with combining records based on coordinate data. Before
+    # we do that, we should mark all of the entries with bad ages.
+    # If we're looking at a date and dates don't match, we have a bad entry.
+    #
+    # NOTE: These are a very few number of records... Last I checked, no records
+    # had bad ages like this... Keeping this code chunk to future-proof it,
+    # though - Lux 
+    dups = records.duplicated(subset=[LAB_ID],keep=False)
+    badAges = records[dups].groupby(LAB_ID).agg( 
+            lambda x: '{} (MISMATCHED)'.format(x) if x.name == AGE and mismatchingEntries(list(x),fuzzFactor=1) else x.iloc[0]
+    )
+    badAges = badAges[badAges[AGE].apply(lambda x: 'MISMATCHED' in str(x))]
+    badAgeIDs = list(badAges.index)
+    if len(badAgeIDs) > 0:
+        for id in records.index:
+            if records.at[id, AGE] in badAgeIDs:
+                records.at[id, AGE] = '{} (MISMATCHED)'.format(records.at[id,AGE])
+        
+ 
+    # Now, for duplicate records with different locAccuracy, pick highest locaccuracy
+    dups = records.duplicated(subset=[LAB_ID],keep=False)
+    dupsWithSameLA = records.duplicated(subset=[LAB_ID,LOC_ACCURACY],keep=False)
+    dupsWithDifferentLA = setMinus(records[dups], records[dupsWithSameLA])
+    highestLA = dupsWithDifferentLA.sort_values(by=[LOC_ACCURACY], ascending=False)\
+            .drop_duplicates(subset=[LAB_ID])
+    records = setMinus(records, dupsWithDifferentLA)
+    records.append(highestLA)
 
     # Sort the records by LocAccuracy so that higher LocAccuracy is chosen first
     records = records.sort_values(by=[LOC_ACCURACY], ascending=False)
@@ -89,16 +125,9 @@ def combineDups(x):
     # If there's nothing to combine, just pick the first thing
     if len(x) == 1:
         return x.iloc[0]
-    # If we're looking at source datasets
-    if x.name == SOURCE:
-       # Concatenate all sources together
-       return ', '.join(x)
     # If we're not looking at coordinates or a date, just pick the first thing
     if x.name != LAT and x.name != LAT and x.name != AGE:
         return x.iloc[0]
-    # If we're looking at a date and dates don't match, we have a bad entry.
-    if x.name == AGE and mismatchingEntries(list(x),fuzzFactor=1):
-        return '{} (MISMATCHED)'.format(x)
     # Otherwise, we have coordinates.
     # Get a list of non-nan entries
     nonNans = getNonNans(x) 
