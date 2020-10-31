@@ -1,11 +1,13 @@
 # Setup
 
-## With conda
+You may set up the scrubber either with conda (recommended) or manually.
+
+### With conda (recommended)
 1.  If you haven't already, install [miniconda](https://docs.conda.io/en/latest/miniconda.html)
 2.  Run ``conda env create -f environment.yml``
 3.  Activate the environment with ``conda activate c14scrub``
 
-## Manual setup
+### Manual setup
 1.  Install [Python 3.7.6 along with Pip](https://www.python.org/downloads/release/python-376/)
 2.  Install the required packages by running ``pip install numpy pandas ftfy tqdm pyshp shapely matplotlib pyproj`` in your command line. For more info on installing packages, see [this tutorial](https://packaging.python.org/tutorials/installing-packages/).
 
