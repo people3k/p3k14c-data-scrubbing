@@ -287,8 +287,8 @@ def finishScrubbing(records, graveyard):
     records     = cleanerRecs
 
     # Remove records that are too old to be meaningful
-    cleanerRecs = records[records[AGE] <= 43500]
-    graveyard   = addBodies(graveyard, records, cleanerRecs, 'Record older than 43500 BP')
+    cleanerRecs = records[records[AGE] <= 55000]
+    graveyard   = addBodies(graveyard, records, cleanerRecs, 'Record older than 55,000 BP')
     records     = cleanerRecs
 
 

@@ -26,6 +26,14 @@ def handleDuplicates(records, graveyard=pd.DataFrame()):
     # Set records to have to duplicates
     records = noDups
 
+    # Concatenate source datasets for true duplicates. Requires some trickery.
+    trueDups = records.duplicated(subset=[LAB_ID, AGE, LAT, LON])
+    concattedSourceDups = records[trueDups].groupby(LAB_ID).agg(
+            lambda x: '; '.join(x) if x.name == SOURCE else x.iloc[0]
+    )
+    records = records.drop_duplicates(subset=[LAB_ID, AGE, LAT, LON])
+    records = records.append(concattedSourceDups.reset_index())
+
     # Sort the records by LocAccuracy so that higher LocAccuracy is chosen first
     records = records.sort_values(by=[LOC_ACCURACY], ascending=False)
 

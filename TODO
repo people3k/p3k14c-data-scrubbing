@@ -1,0 +1,10 @@
+Radiocarbon: 
+
+[ ] Prioritize LocAccuracy when comparing records with dissimilar locations 
+[ ] Prioritize U of Wyoming U.S. dates over CARD, ALWAYS! 
+[x] Cutoff date 55,000 BP 
+[x] Remove records if stddev is greater than age 
+[x] Only concatenate source datasets for true duplicates 
+
+[ ] Fuzz Bocinksy dates 
+[ ] Everything in CARD should be blurred 
