@@ -28,5 +28,6 @@ STD_DEV       = 'Error'
 LOC_ACCURACY  = 'LocAccuracy'
 SOURCE        = 'Source'
 PROVINCE      = 'Province'
+D13C          = 'd13C'
 FUZZ_FACTOR   = 0.5
 

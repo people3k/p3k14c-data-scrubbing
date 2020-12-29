@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from math import ceil
-from common import getRecords, LAB_ID, LAB_CODE_FILE, LAT, LON, AGE, STD_DEV, LOC_ACCURACY, SOURCE, PROVINCE, FUZZ_FACTOR, flushMsg, setMinus
+from common import getRecords, LAB_ID, LAB_CODE_FILE, LAT, LON, AGE, STD_DEV, LOC_ACCURACY, SOURCE, PROVINCE, FUZZ_FACTOR, flushMsg, setMinus, D13C
 
 SHAPE = (0,0)
 
@@ -125,7 +125,27 @@ def combineDups(x):
     # If there's nothing to combine, just pick the first thing
     if len(x) == 1:
         return x.iloc[0]
+    # Now, we're dealing with multiple things
     # If we're looking at d13C
+    if x.name == D13C:
+        # Cast to floats for ease
+        floats = [float(x.iloc[i]) for i in range(len(x))]
+        # Get values between -1 and -30
+        goodVals = [n for n in floats if -30 <= n and n <= -1]
+        # Leave blank if theres more than one value between -1 and -30
+        if len(goodVals) > 1:
+            return np.nan
+        if goodVals != []:
+            return goodVals[1]
+        # Otherwise, pick the first non-zero value
+        nonZeroes = [n for n in floats if n!=0]
+        # If there are nonzero values
+        if nonZeroes != []:
+            # Pick it
+            return nonZeroes[0]
+        # Otherwise, we only have zero
+        else:
+            return 0
     # If we're not looking at coordinates or a date, just pick the first thing
     if x.name != LAT and x.name != LAT and x.name != AGE:
         return x.iloc[0]
