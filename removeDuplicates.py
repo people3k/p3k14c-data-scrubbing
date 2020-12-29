@@ -23,7 +23,7 @@ def handleDuplicates(records, graveyard=pd.DataFrame()):
     funeral = setMinus(records, noDups)
     funeral['removal_reason'] = 'True duplicate'
     graveyard = graveyard.append(funeral)
-    # Set records to have to duplicates
+    # Set records to have no duplicates
     records = noDups
 
     # Concatenate source datasets for true duplicates. Requires some trickery.
@@ -125,6 +125,7 @@ def combineDups(x):
     # If there's nothing to combine, just pick the first thing
     if len(x) == 1:
         return x.iloc[0]
+    # If we're looking at d13C
     # If we're not looking at coordinates or a date, just pick the first thing
     if x.name != LAT and x.name != LAT and x.name != AGE:
         return x.iloc[0]

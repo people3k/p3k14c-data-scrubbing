@@ -165,7 +165,7 @@ def getCAInfo(lon,lat):
 #
 #exit()
 
-if __name__ == '__main__':
+def main():
     print('Loading in radiocarbon records...')
     records = pd.read_csv(this_dir + 'radiocarbon_scrubbed.csv',index_col=0)
 
@@ -210,3 +210,6 @@ if __name__ == '__main__':
     print('Exporting...')
     records.to_csv(this_dir + 'radiocarbon_scrubbed_and_fuzzed.csv')
 
+
+if __name__ == '__main__':
+    main()
