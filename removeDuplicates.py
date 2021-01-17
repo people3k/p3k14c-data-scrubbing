@@ -136,7 +136,7 @@ def combineDups(x):
         if len(goodVals) > 1:
             return np.nan
         if goodVals != []:
-            return goodVals[1]
+            return goodVals[0]
         # Otherwise, pick the first non-zero value
         nonZeroes = [n for n in floats if n!=0]
         # If there are nonzero values
