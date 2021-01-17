@@ -13,7 +13,7 @@ You may set up the scrubber either with conda (recommended) or manually.
 
 # Usage
 
-1.  Ensure that your raw records file is saved using UTF-8 encoding. This can be accomplish by most CSV-handling programs.
+1.  Ensure that your raw records file is saved using UTF-8 encoding. This can be accomplished by most CSV-handling programs.
 2.  Execute the program by running ``python scrub.py in_file.csv out_file.csv`` in the command line, where the input file is the name of the raw records file.
 
 The cleaned records will be saved to your specified filename, a list of unknown lab codes will be saved to ``unknown_codes.csv``, and a list of all deleted records with their reason for removal will be saved to ``graveyard.csv``.
