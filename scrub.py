@@ -297,20 +297,17 @@ def finishScrubbing(records, graveyard):
     records[LON] = records[LON].apply(justFloats)
 
     # Fix a handful of weirdly formatted coordinates
-    records.at['M-2212/M-2213', LAT ] = np.nan 
-    records.at['M-1900',        LAT ] = np.nan 
-    records.at['M-2281',        LAT ] = np.nan 
-    records.at['GXO-676',       LAT ] = np.nan 
-    records.at['M-1483',        LAT ] = np.nan 
-    records.at['M-1602',        LAT ] = np.nan 
-    records.at['GaK-3896',      LAT ] = np.nan 
-    records.at['M-2212/M-2213', LON ] = np.nan 
-    records.at['M-1900',        LON ] = np.nan 
-    records.at['M-2281',        LON ] = np.nan 
-    records.at['GXO-676',       LON ] = np.nan 
-    records.at['M-1483',        LON ] = np.nan 
-    records.at['M-1602',        LON ] = np.nan 
-    records.at['GaK-3896',      LON ] = np.nan 
+    def delCoords(record):
+        if record in records.index:
+            records.at[record, LON ] = np.nan 
+            records.at[record, LON ] = np.nan 
+        return
+    delCoords('M-1900')
+    delCoords('M-2281')
+    delCoords('GXO-676')
+    delCoords('M-1483')
+    delCoords('M-1602')
+    delCoords('GaK-3896')
 
     return records, graveyard
 
