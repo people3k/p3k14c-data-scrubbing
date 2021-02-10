@@ -42,23 +42,22 @@ def handleDuplicates(records, graveyard=pd.DataFrame()):
     records   = setMinus(records, justCard)
 
     
+
     # It's time to mess with combining records based on coordinate data. Before
     # we do that, we should mark all of the entries with bad ages.
     # If we're looking at a date and dates don't match, we have a bad entry.
     #
-    # NOTE: These are a very few number of records... Last I checked, no records
-    # had bad ages like this... Keeping this code chunk to future-proof it,
-    # though - Lux 
     dups = records.duplicated(subset=[LAB_ID],keep=False)
     badAges = records[dups].groupby(LAB_ID).agg( 
             lambda x: '{} (MISMATCHED)'.format(x) if x.name == AGE and mismatchingEntries(list(x),fuzzFactor=1) else x.iloc[0]
     )
     badAges = badAges[badAges[AGE].apply(lambda x: 'MISMATCHED' in str(x))]
     badAgeIDs = list(badAges.index)
-    if len(badAgeIDs) > 0:
-        for id in records.index:
-            if records.at[id, AGE] in badAgeIDs:
-                records.at[id, AGE] = '{} (MISMATCHED)'.format(records.at[id,AGE])
+    records.set_index(LAB_ID)
+    for id in badAgeIDs:
+        if id in records.index:
+            records.at[id, AGE] = '{} (MISMATCHED)'.format(records.at[id,AGE])
+    records.reset_index()
         
  
     # Now, for duplicate records with different locAccuracy, pick highest locaccuracy
@@ -92,6 +91,12 @@ def handleDuplicates(records, graveyard=pd.DataFrame()):
     mismatchedAge = records[records[AGE].apply(isMismatched)]
     mismatchedAge['removal_reason'] = 'Duplicate record with mismatching age'
     graveyard = graveyard.append(mismatchedAge)
+
+    # Now, convert all those bad records into bad entries
+    makeBad =  (lambda x : 'BADENTRY' if 'MISMATCHED' in str(x) else x)
+    records[LAT] = records[LAT].apply(makeBad)
+    records[LON] = records[LON].apply(makeBad)
+    records[AGE] = records[AGE].apply(makeBad)
 
     
     # Filter out bad entries
