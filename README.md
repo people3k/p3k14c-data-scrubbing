@@ -4,8 +4,9 @@ You may set up the scrubber either with conda (recommended) or manually.
 
 ### With conda (recommended)
 1.  If you haven't already, install [miniconda](https://docs.conda.io/en/latest/miniconda.html)
-2.  Run ``conda env create -f environment.yml``
-3.  Activate the environment with ``conda activate c14scrub``
+2.  Run ``git clone https://github.com/people3k/radiocarbon-scrubbing && cd radiocarbon-scrubbing``
+3.  Run ``conda env create -f environment.yml``
+4.  Activate the environment with ``conda activate c14scrub``
 
 ### Manual setup
 1.  Install [Python 3.7.6 along with Pip](https://www.python.org/downloads/release/python-376/)
