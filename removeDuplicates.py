@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from math import ceil
-from common import getRecords, LAB_ID, LAB_CODE_FILE, LAT, LON, AGE, STD_DEV, LOC_ACCURACY, SOURCE, PROVINCE, FUZZ_FACTOR, flushMsg, setMinus, D13C
+from common import getRecords, LAB_ID, LAB_CODE_FILE, LAT, LON, AGE, STD_DEV, LOC_ACCURACY, SOURCE, PROVINCE, FUZZ_FACTOR, flushMsg, setMinus, D13C, embalm
 
 SHAPE = (0,0)
 
@@ -14,7 +14,6 @@ def handleDuplicates(records, graveyard=pd.DataFrame()):
     # Reset index so we can index by the index
     # index index index
     records = records.reset_index()
-    graveyard = graveyard.reset_index()
 
     # Now, keep an arbitrary duplicate if both the date, precise coordinates,
     # and source datasets match
@@ -22,7 +21,7 @@ def handleDuplicates(records, graveyard=pd.DataFrame()):
     # Get the duplicate entries and add to the graveyard
     funeral = setMinus(records, noDups)
     funeral['removal_reason'] = 'True duplicate'
-    graveyard = graveyard.append(funeral)
+    graveyard = graveyard.append(embalm(funeral))
     # Set records to have no duplicates
     records = noDups
 
@@ -75,9 +74,10 @@ def handleDuplicates(records, graveyard=pd.DataFrame()):
     # If the lab number and the dates match, prioritize entries with lat/long info,
     # but delete entries that have existing mismatching lat/long info
     combinedDups = records.groupby(LAB_ID).agg(lambda x: combineDups(x))
-    funeral = setMinus(records, combinedDups)
+    funeral = setMinus(records.set_index(LAB_ID), combinedDups)
+    print(funeral)
     funeral['removal_reason'] = 'Merged with partial duplicates into single record'
-    graveyard = graveyard.append(funeral)
+    graveyard = graveyard.append(embalm(funeral))
     records = combinedDups
 
     # Sort records back for algorithms that rely on LAB_ID order
@@ -86,11 +86,11 @@ def handleDuplicates(records, graveyard=pd.DataFrame()):
     isMismatched = lambda x: 'MISMATCHED' in str(x)
     mismatchedCoords = records[records[LAT].apply(isMismatched) | records[LON].apply(isMismatched)]
     mismatchedCoords['removal_reason'] = 'Duplicate record with mismatching coordinates'
-    graveyard = graveyard.append(mismatchedCoords)
+    graveyard = graveyard.append(embalm(mismatchedCoords))
 
     mismatchedAge = records[records[AGE].apply(isMismatched)]
     mismatchedAge['removal_reason'] = 'Duplicate record with mismatching age'
-    graveyard = graveyard.append(mismatchedAge)
+    graveyard = graveyard.append(embalm(mismatchedAge))
 
     # Now, convert all those bad records into bad entries
     makeBad =  (lambda x : 'BADENTRY' if 'MISMATCHED' in str(x) else x)

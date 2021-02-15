@@ -14,7 +14,7 @@ from tqdm import tqdm
 from math import ceil
 import ftfy
 from centroids.fuzz import getUSInfo, getCAInfo
-from common import getRecords, LAB_ID, LAB_CODE_FILE, LAT, LON, AGE, STD_DEV, LOC_ACCURACY, SOURCE, PROVINCE, FUZZ_FACTOR, flushMsg, setMinus
+from common import getRecords, LAB_ID, LAB_CODE_FILE, LAT, LON, AGE, STD_DEV, LOC_ACCURACY, SOURCE, PROVINCE, FUZZ_FACTOR, flushMsg, setMinus, embalm
 from removeDuplicates import handleDuplicates
 
 pd.options.mode.chained_assignment = None  # default='warn'
@@ -62,7 +62,6 @@ def fixTypos(records):
     )
     return records
 
-
 # Remove records with unknown lab codes,
 # and generate a list of unknown lab identifiers.
 def deleteBadLabs(records, graveyard):
@@ -86,7 +85,7 @@ def deleteBadLabs(records, graveyard):
     # Indicate a reason
     funeral['removal_reason'] = 'Unknown lab ID'
     # Graveyard's first funeral
-    graveyard = funeral
+    graveyard = embalm(funeral)
 
     # Clean dataset to only contain known codes
     records   = records[records[LAB_ID].apply(codeFromLabNum).isin(knownCodes)]
@@ -99,7 +98,7 @@ def deleteBadLabs(records, graveyard):
     # Host another funeral for records without any actual numerals
     funeral = records[~records[LAB_ID].apply(hasNumeral)]
     funeral['removal_reason'] = 'Known lab ID but unknown lab code'
-    graveyard = graveyard.append(funeral)
+    graveyard = graveyard.append(embalm(funeral))
     # Remove records without any numerals
     records = records[records[LAB_ID].apply(hasNumeral)]
 
@@ -107,14 +106,13 @@ def deleteBadLabs(records, graveyard):
     fil = lambda s: '?' not in s
     funeral = records[~records[LAB_ID].apply(fil)]
     funeral['removal_reason'] = 'Question mark in lab code'
-    graveyard = graveyard.append(funeral)
+    graveyard = graveyard.append(embalm(funeral))
     records   = records[records[LAB_ID].apply(fil)]
 
     # Scrub leading whitespace
     records[LAB_ID] = records[LAB_ID].apply(lambda s: s.lstrip())
 
     records = records.set_index(LAB_ID)
-    graveyard = graveyard.set_index(LAB_ID)
     return records, graveyard
 
 
@@ -248,7 +246,7 @@ def justFloats(x):
 def addBodies(graveyard, records, cleanerRecords, reason):
     funeral = setMinus(records, cleanerRecords)
     funeral['removal_reason'] = reason
-    return graveyard.append(funeral)
+    return graveyard.append(embalm(funeral))
 
 # Apply miscellaneous cleaning 
 def finishScrubbing(records, graveyard):
