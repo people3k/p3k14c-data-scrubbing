@@ -167,7 +167,7 @@ def getCAInfo(lon,lat):
 
 def main():
     print('Loading in radiocarbon records...')
-    records = pd.read_csv(this_dir + 'radiocarbon_scrubbed.csv',index_col=0)
+    records = pd.read_csv(this_dir+'radiocarbon_scrubbed.csv',index_col=0,low_memory=False)
 
     # Fetch a slice of only NA records for reference purposes
     NArecs = pd.DataFrame(records[records['Country'].isin(['USA', 'Canada'])])

@@ -369,12 +369,7 @@ def fillInCountyInfo(records):
 # Save the records to the output file
 def save(records, outFilePath, fixEncoding=True):
     print('Exporting {}...'.format(outFilePath))
-    outFile = open(outFilePath,'w',encoding='utf-8')
-    if fixEncoding:
-        outFile.write(ftfy.fix_text(records.to_csv()))
-    else:
-        outFile.write(records.to_csv())
-    outFile.close()
+    records.to_csv(outFilePath, sep=',', encoding='utf-8')
 
 def main():
     inFilePath, outFilePath = sys.argv[1], sys.argv[2]
