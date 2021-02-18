@@ -2,9 +2,9 @@ import sys
 
 # First of all, check to make sure arugments are being passed properly
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
+    if len(sys.argv) not in [3,4]:
         print('Usage:')
-        print('python scrub.py <input_file_name.csv> <output_file_name.csv>')
+        print('python scrub.py <input_file_name.csv> <output_file_name.csv> [optional: graveyard_name.csv]')
         exit(1)
  
 import pandas as pd
@@ -275,11 +275,12 @@ def finishScrubbing(records, graveyard):
     graveyard   = addBodies(graveyard, records, cleanerRecs, 'Age from the future')
     records     = cleanerRecs
 
-    # Remove StdDevs that are too large for our tastes
-    cleanerRecs = records[(records[STD_DEV] >= 10) & (records[STD_DEV] <= 300)]
-    graveyard   = addBodies(graveyard, records, cleanerRecs, 'Error too small or too large')
+    # Remove records with improbably small errors
+    cleanerRecs = records[records[STD_DEV] >= 10]
+    graveyard   = addBodies(graveyard, records, cleanerRecs, 'Error less than 10 years')
     records     = cleanerRecs
 
+    # Remove records where error is greater than age
     cleanerRecs = records[records[STD_DEV] <= records[AGE]]
     graveyard   = addBodies(graveyard, records, cleanerRecs, 'Error greater than age')
     records     = cleanerRecs
@@ -373,6 +374,9 @@ def save(records, outFilePath, fixEncoding=True):
 
 def main():
     inFilePath, outFilePath = sys.argv[1], sys.argv[2]
+    graveyardPath = 'graveyard.csv'
+    if len(sys.argv) > 3:
+        graveyardPath = sys.argv[3]
     records = getRecords(inFilePath)
     # Create a database of all removed records to keep track of their reason
     # for removal
@@ -381,7 +385,7 @@ def main():
     records = convertCoordinates(records)
     records, graveyard = handleDuplicates(records, graveyard=graveyard)
     records, graveyard = finishScrubbing(records, graveyard)
-    save(graveyard, 'graveyard.csv', fixEncoding=False)
+    save(graveyard, graveyardPath, fixEncoding=False)
     records = fixEncoding(records)
     records = fillInCountyInfo(records)
     save(records, outFilePath)

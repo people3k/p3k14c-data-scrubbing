@@ -19,6 +19,8 @@ You may set up the scrubber either with conda (recommended) or manually.
 
 The cleaned records will be saved to your specified filename, a list of unknown lab codes will be saved to ``unknown_codes.csv``, and a list of all deleted records with their reason for removal will be saved to ``graveyard.csv``.
 
+Optionally, the graveyard path may be specified as the third parameter. E.g., ``python scrub.py in_file.csv out_file.csv myGraveyard.csv``
+
 # Independent "remove duplicates" feature
 
 If you need to remove duplicate records from a certain dataset without necessarily running the entire scrubbing process on it, this is achievable through ``removeDuplicates.py``. Simply run ``python removeDuplicates.py infile_name.csv outfile_name.csv`` and the program will run only the duplicate removal subroutine on ``infile_name.csv`` and save the resulting dataset to ``outfile_name.csv``.
