@@ -276,7 +276,7 @@ def finishScrubbing(records, graveyard):
     records     = cleanerRecs
 
     # Remove records with improbably small errors
-    cleanerRecs = records[records[STD_DEV] >= 10]
+    cleanerRecs = records[records[STD_DEV] >= 15]
     graveyard   = addBodies(graveyard, records, cleanerRecs, 'Error less than 10 years')
     records     = cleanerRecs
 
@@ -289,6 +289,9 @@ def finishScrubbing(records, graveyard):
     cleanerRecs = records[records[AGE] <= 55000]
     graveyard   = addBodies(graveyard, records, cleanerRecs, 'Record older than 55,000 BP')
     records     = cleanerRecs
+
+    # Fix country name for USA
+    records['Country'] = records['Country'].apply(lambda x: 'USA' if x == 'United States' else x)
 
 
     # Properly format null entries
