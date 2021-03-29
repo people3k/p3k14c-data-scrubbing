@@ -75,7 +75,6 @@ def handleDuplicates(records, graveyard=pd.DataFrame()):
     # but delete entries that have existing mismatching lat/long info
     combinedDups = records.groupby(LAB_ID).agg(lambda x: combineDups(x))
     funeral = setMinus(records.set_index(LAB_ID), combinedDups)
-    print(funeral)
     funeral['removal_reason'] = 'Merged with partial duplicates into single record'
     graveyard = graveyard.append(embalm(funeral))
     records = combinedDups
