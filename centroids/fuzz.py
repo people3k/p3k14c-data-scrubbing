@@ -2,13 +2,16 @@ import sys
 
 # First of all, check to make sure arugments are being passed properly
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
+    if len(sys.argv) not in [3,4]:
         print('Usage:')
         print('python fuzz.py <input_file_name.csv> <output_file_name.csv>')
         exit(1)
     print('Initializing...')
  
 inFilePath, outFilePath = sys.argv[1], sys.argv[2]
+MUSH = False
+if len(sys.argv) == 4 and sys.argv[3] == 'mush':
+    MUSH = True
 
 import shapefile
 import numpy as np
@@ -175,18 +178,42 @@ def getCAInfo(lon,lat):
 #
 #exit()
 
+# Check if the coordinate is in Northing/Easting format
+def isSolheim(coord1):
+    coord = str(coord1)
+    return (coord[-1] == 'N' or coord[-1] == 'E')
+
+
+def fixCoord(coord):
+    if isSolheim(coord):
+        return coord
+    if str(coord) == 'nan':
+        return 0
+    if isinstance(coord, float):
+        return coord
+    try:
+        return float(coord)
+    except:
+        return 0
+
+
 def main():
     print('Loading in radiocarbon records...')
     records = pd.read_csv(inFilePath,index_col=0,low_memory=False)
+
+    if MUSH:
+        records['Lat'] = records['Lat'].apply(fixCoord)
+        records['Long'] = records['Long'].apply(fixCoord)
 
     gb = records[records['Source'] == 'GuedesBocinsky2018']
 
     # Truncate to two decimal places
     for i in gb.index:
-        lat = records.at[i, 'Lat']
-        lon = records.at[i, 'Long']
-        records.at[i, 'Lat'] = np.floor(100*lat/100)
-        records.at[i, 'Long'] = np.floor(100*lon/100)
+        if str(i) != 'nan':
+            lat = records.at[i, 'Lat']
+            lon = records.at[i, 'Long']
+            records.at[i, 'Lat'] = np.floor(100*lat/100)
+            records.at[i, 'Long'] = np.floor(100*lon/100)
     
 
     # Fetch a slice of only NA records for reference purposes
@@ -202,6 +229,16 @@ def main():
     for i, labID in tqdm(enumerate(NArecs.index), total=NArecs.shape[0]):
         # Get its lat and lon
         lat, lon = NArecs.at[labID, 'Lat'],NArecs.at[labID, 'Long']
+
+        if MUSH:
+            try: 
+                if lat == 0 and lon == 0:
+                    continue
+            except:
+                records.at[labID, 'Lat'] = 0
+                records.at[labID, 'Long'] = 0
+                continue
+
         # Do nothing if the coordinates are 0 (null)
         if lat == 0 and lon == 0:
             continue
