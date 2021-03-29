@@ -370,6 +370,12 @@ def fillInCountyInfo(records):
 
     return records
 
+# Strip whitespace from the SiteName and SiteID
+def stripWhitespace(records):
+    records['SiteName'] = records['SiteName'].apply(lambda x: str(x).strip())
+    records['SiteID']   = records['SiteID'].apply(lambda x: str(x).strip())
+    return records
+
 # Save the records to the output file
 def save(records, outFilePath, fixEncoding=True):
     print('Exporting {}...'.format(outFilePath))
@@ -386,6 +392,7 @@ def main():
     graveyard = pd.DataFrame()
     records, graveyard = deleteBadLabs(records, graveyard)
     records = convertCoordinates(records)
+    records = stripWhitespace(records)
     records, graveyard = handleDuplicates(records, graveyard=graveyard)
     records, graveyard = finishScrubbing(records, graveyard)
     save(graveyard, graveyardPath, fixEncoding=False)
