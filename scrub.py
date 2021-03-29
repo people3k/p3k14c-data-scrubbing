@@ -366,6 +366,7 @@ def fillInCountyInfo(records):
                 exit()
         # Set the original record's names
         records.at[labID, 'guessed_subprovince'] = subdiv
+        records.at[labID, 'guessed_province'] = div
 
 
     return records
