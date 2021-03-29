@@ -1,5 +1,14 @@
+import sys
+
+# First of all, check to make sure arugments are being passed properly
 if __name__ == '__main__':
+    if len(sys.argv) != 3:
+        print('Usage:')
+        print('python fuzz.py <input_file_name.csv> <output_file_name.csv>')
+        exit(1)
     print('Initializing...')
+ 
+inFilePath, outFilePath = sys.argv[1], sys.argv[2]
 
 import shapefile
 import numpy as np
@@ -168,13 +177,16 @@ def getCAInfo(lon,lat):
 
 def main():
     print('Loading in radiocarbon records...')
-    records = pd.read_csv(this_dir+'radiocarbon_scrubbed.csv',index_col=0,low_memory=False)
+    records = pd.read_csv(inFilePath,index_col=0,low_memory=False)
 
     gb = records[records['Source'] == 'GuedesBocinsky2018']
+
     # Truncate to two decimal places
     for i in gb.index:
-        records.at[i, 'Lat'] = np.floor(100*records.at[i, 'Lat'])/100
-        records.at[i, 'Long'] = np.floor(100*records.at[i, 'Long'])/100
+        lat = records.at[i, 'Lat']
+        lon = records.at[i, 'Long']
+        records.at[i, 'Lat'] = np.floor(100*lat/100)
+        records.at[i, 'Long'] = np.floor(100*lon/100)
     
 
     # Fetch a slice of only NA records for reference purposes
@@ -218,7 +230,7 @@ def main():
 
 
     print('Exporting...')
-    records.to_csv(this_dir + 'radiocarbon_scrubbed_and_fuzzed.csv')
+    records.to_csv(outFilePath)
 
 
 if __name__ == '__main__':

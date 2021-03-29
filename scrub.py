@@ -256,7 +256,7 @@ def finishScrubbing(records, graveyard):
     graveyard   = addBodies(graveyard, records, cleanerRecs, 'Null age and error')
     records     = cleanerRecs
 
-    # Remove entries with non-integer entries for age and SD
+    # Remove entries with integer entries for age and SD
     cleanerRecs = records[records[AGE].apply(isInteger)]
     graveyard   = addBodies(graveyard, records, cleanerRecs, 'Non-integer age')
     records     = cleanerRecs
