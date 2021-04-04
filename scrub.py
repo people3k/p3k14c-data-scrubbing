@@ -364,9 +364,10 @@ def fillInCountyInfo(records):
                 print('Canadian exception')
                 print(lat,lon)
                 exit()
-        # Set the original record's names
-        records.at[labID, 'guessed_subprovince'] = subdiv
-        records.at[labID, 'guessed_province'] = div
+        # Some columns for guessing at province and subprovince names for
+        # Non-USA/Canada dates
+        #records.at[labID, 'guessed_subprovince'] = subdiv
+        #records.at[labID, 'guessed_province'] = div
 
 
     return records
