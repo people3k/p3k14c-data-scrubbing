@@ -4,7 +4,7 @@ You may set up the scrubber either with conda (recommended) or manually.
 
 ### With conda (recommended)
 1.  If you haven't already, install [miniconda](https://docs.conda.io/en/latest/miniconda.html)
-2.  Run ``git clone https://github.com/people3k/radiocarbon-scrubbing && cd radiocarbon-scrubbing``
+2.  Run ``git clone https://github.com/people3k/p3k14c-data-scrubbing && cd p3k14c-data-scrubbing``
 3.  Run ``conda env create -f environment.yml``
 4.  Activate the environment with ``conda activate c14scrub``
 
