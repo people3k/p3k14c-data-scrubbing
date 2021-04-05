@@ -383,6 +383,22 @@ def save(records, outFilePath, fixEncoding=True):
     print('Exporting {}...'.format(outFilePath))
     records.to_csv(outFilePath, sep=',', encoding='utf-8')
 
+# Column fixing function
+def colFix(x):
+    if str(x) == 'nan':
+        return x
+    for c in ['\\\"','\"','\\',',','\"','\"']:
+        x = x.replace(c,'')
+    return x
+
+
+# Remove all commas and quotation marks from the dataset in order to prevent
+# any possible mis-reading of the data from non-robust programs such as tDAR
+def fixColumns(records):
+    for col in ['Reference','Source','Province','Country','SiteName','Period','Method','Taxa','Material']:
+        records[col] = records[col].apply(colFix)
+    return records
+
 def main():
     inFilePath, outFilePath = sys.argv[1], sys.argv[2]
     graveyardPath = 'graveyard.csv'
@@ -400,6 +416,7 @@ def main():
     save(graveyard, graveyardPath, fixEncoding=False)
     records = fixEncoding(records)
     records = fillInCountyInfo(records)
+    records = fixColumns(records)
     save(records, outFilePath)
 
 if __name__ == '__main__':
