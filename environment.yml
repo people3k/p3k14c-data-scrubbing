@@ -13,3 +13,4 @@ dependencies:
     - shapely
     - matplotlib
     - pyproj
+    - descartes
