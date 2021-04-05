@@ -76,21 +76,48 @@ for i,s in enumerate(global_shp.shapes()):
     elif country in GBC_countries:
         GBC_bounds.append(makePair(s,i))
 
-testlat,testlon = 40.62411504008629, -111.85376945306159
-
 # Get the ADMIN2 centroid given a point and the bound set to use
 # Returns lon,lat
-def toCentroid(lat,lon,bound_set=USA_bounds):
+def toCentroid(lon,lat,bound_set):
     point = Point((lon,lat))
     # Iterate through every shape in the set to see if the point is in one
     for i in range(len(bound_set)):
         boundary = bound_set[i]['shape']
         if point.within(boundary):
             return boundary.centroid.x,boundary.centroid.y
-    return 0,0
+    # If that doesn't work, just select the closest shape.
+    # Computationally expensive, but, hey, we've got time.
+    closest_admin2 = min([x['shape'] for x in bound_set], key=point.distance)
+    return closest_admin2.centroid.x, closest_admin2.centroid.y
 
-print(toCentroid(testlat,testlon))
 
-#print('Reading in radiocarbon records...')
-#records = pd.read_csv(IN_FILE_PATH,index_col=0)
+print('Reading in {}...'.format(IN_FILE_PATH))
+records = pd.read_csv(IN_FILE_PATH,index_col=0,low_memory=False)
 
+print('Fuzzing records...')
+# Iterate through every record
+for i in tqdm(records.index):
+    boundSet = []
+    fuzz = False
+    # If the record is in the USA, Canada, or GB2018, select the right bound set
+    # and set the fuzz flag.
+    if records.at[i, 'Country'] == 'USA':
+        boundSet = USA_bounds
+        fuzz = True
+    elif records.at[i, 'Country'] == 'Canada':
+        boundSet = CAN_bounds
+        fuzz = True
+    elif records.at[i, 'Source'] == 'GuedesBocinsky2018':
+        boundSet = GBC_bounds
+        fuzz = True
+    # If the fuzz flag is set
+    if fuzz:
+        # Fuzz it!
+        oldLon,oldLat = records.at[i,'Long'],records.at[i,'Lat']
+        newLon,newLat = toCentroid(oldLon, oldLat, boundSet)
+        records.at[i, 'Long'] = newLon
+        records.at[i, 'Lat']  = newLat
+
+# Save the records
+print('Saving records to {}'.format(OUT_FILE_PATH))
+records.to_csv(OUT_FILE_PATH)
