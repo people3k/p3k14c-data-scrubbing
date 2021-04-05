@@ -23,7 +23,7 @@ The cleaned records will be saved to your specified filename, a list of unknown 
 Optionally, the graveyard path may be specified as the third parameter. E.g., ``python scrub.py in_file.csv out_file.csv myGraveyard.csv``
 
 ## Fuzzing
-Fuzzing required for all dates in the USA, Canada, and GuedesBocinsky2018 dataset. We utilize the GeoBoundaries 25% shapefile dataset to obscure all date coordinates to Admin2 centroids (county centroids in the US, census divisions in Canada, etc.). The program is run using ``python fuzz/fuzz.py scrubbed_data.csv scrubbed_and_fuzzed_data.csv``. Additionally, one may visually verify the correctness of the fuzzing process by visualizing the results with ``python fuzz/visualize.py scrubbed_and_fuzzed_data.csv``.
+Fuzzing is required for all dates in the USA, Canada, and the GuedesBocinsky2018 dataset. We utilize the GeoBoundaries 25% shapefile to obscure all date coordinates to Admin2 centroids (county centroids in the US, census division centroids in Canada, etc.). The program is run using ``python fuzz/fuzz.py scrubbed_data.csv scrubbed_and_fuzzed_data.csv``. Additionally, one may visually verify the correctness of the fuzzing process by plotting the results with ``python fuzz/visualize.py scrubbed_and_fuzzed_data.csv``.
 
 ## Independent "remove duplicates" feature
 If you need to remove duplicate records from a certain dataset without necessarily running the entire scrubbing process on it, this is achievable through ``removeDuplicates.py``. Simply run ``python removeDuplicates.py infile_name.csv outfile_name.csv`` and the program will run only the duplicate removal subroutine on ``infile_name.csv`` and save the resulting dataset to ``outfile_name.csv``.
