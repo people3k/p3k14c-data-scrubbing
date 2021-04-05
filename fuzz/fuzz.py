@@ -95,29 +95,58 @@ print('Reading in {}...'.format(IN_FILE_PATH))
 records = pd.read_csv(IN_FILE_PATH,index_col=0,low_memory=False)
 
 print('Fuzzing records...')
-# Iterate through every record
-for i in tqdm(records.index):
-    boundSet = []
-    fuzz = False
-    # If the record is in the USA, Canada, or GB2018, select the right bound set
-    # and set the fuzz flag.
-    if records.at[i, 'Country'] == 'USA':
-        boundSet = USA_bounds
-        fuzz = True
-    elif records.at[i, 'Country'] == 'Canada':
-        boundSet = CAN_bounds
-        fuzz = True
-    elif records.at[i, 'Source'] == 'GuedesBocinsky2018':
-        boundSet = GBC_bounds
-        fuzz = True
-    # If the fuzz flag is set
-    if fuzz:
-        # Fuzz it!
-        oldLon,oldLat = records.at[i,'Long'],records.at[i,'Lat']
-        newLon,newLat = toCentroid(oldLon, oldLat, boundSet)
-        records.at[i, 'Long'] = newLon
-        records.at[i, 'Lat']  = newLat
 
+count = 0
+pbar=tqdm(total=len(records))
+
+
+def fuzz(series):
+    global count
+    count += 1
+    if count % 1000 == 0:
+        pbar.update(1000)
+    boundSet = []
+    if series['Country'] == 'USA':
+        boundSet = USA_bounds
+    elif series['Country'] == 'Canada':
+        boundSet = CAN_bounds
+    elif series['Source'] == 'GuedesBocinsky2018':
+        boundSet = GBC_bounds
+    else:
+        return series
+    # Fuzz it!
+    oldLon,oldLat = series['Long'],series['Lat']
+    newLon,newLat = toCentroid(oldLon, oldLat, boundSet)
+    series['Long'] = newLon
+    series['Lat'] = newLat
+    return series
+
+records = records.apply(fuzz, axis=1)
+pbar.close()
+
+## Iterate through every record
+#for i in tqdm(records.index):
+#    boundSet = []
+#    fuzz = False
+#    # If the record is in the USA, Canada, or GB2018, select the right bound set
+#    # and set the fuzz flag.
+#    if records.at[i, 'Country'] == 'USA':
+#        boundSet = USA_bounds
+#        fuzz = True
+#    elif records.at[i, 'Country'] == 'Canada':
+#        boundSet = CAN_bounds
+#        fuzz = True
+#    elif records.at[i, 'Source'] == 'GuedesBocinsky2018':
+#        boundSet = GBC_bounds
+#        fuzz = True
+#    # If the fuzz flag is set
+#    if fuzz:
+#        # Fuzz it!
+#        oldLon,oldLat = records.at[i,'Long'],records.at[i,'Lat']
+#        newLon,newLat = toCentroid(oldLon, oldLat, boundSet)
+#        records.at[i, 'Long'] = newLon
+#        records.at[i, 'Lat']  = newLat
+#
 # Save the records
 print('Saving records to {}'.format(OUT_FILE_PATH))
 records.to_csv(OUT_FILE_PATH)
