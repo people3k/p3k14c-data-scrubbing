@@ -386,7 +386,7 @@ def save(records, outFilePath, fixEncoding=True):
 # Column fixing function
 def colFix(x):
     if str(x) == 'nan':
-        return x
+        return np.nan
     for c in ['\\\"','\"','\\',',','\"','\"']:
         x = x.replace(c,'')
     return x
