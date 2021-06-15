@@ -16,6 +16,7 @@ import ftfy
 from centroids.fuzz import getUSInfo, getCAInfo
 from common import getRecords, LAB_ID, LAB_CODE_FILE, LAT, LON, AGE, STD_DEV, LOC_ACCURACY, SOURCE, PROVINCE, FUZZ_FACTOR, flushMsg, setMinus, embalm
 from removeDuplicates import handleDuplicates
+import re
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -249,7 +250,7 @@ def addBodies(graveyard, records, cleanerRecords, reason):
     return graveyard.append(embalm(funeral))
 
 # Apply miscellaneous cleaning 
-def finishScrubbing(records, graveyard):
+def applyMiscellaneousScrubbing(records, graveyard):
     print('Finishing miscellaneous scrubbing')
     # Remove records with null entries for age and SD
     cleanerRecs = records.dropna(subset=[AGE, STD_DEV])
@@ -389,8 +390,14 @@ def colFix(x):
         return np.nan
     for c in ['\\\"','\"','\\',',','\"','\"']:
         x = x.replace(c,'')
+    # Replace ordinary spaces with pipes as a sentinel value
+    x = x.replace(' ','|')
+    # Remove all possible types of whitespace in Unicode
+    # See https://stackoverflow.com/a/3739928
+    x = re.sub(r'(\s|\u180B|\u200B|\u200C|\u200D|\u2060|\uFEFF)+', '', x)
+    # Replace pipes with normal spaces again
+    x = x.replace('|',' ')
     return x
-
 
 # Remove all commas and quotation marks from the dataset in order to prevent
 # any possible mis-reading of the data from non-robust programs such as tDAR
@@ -412,7 +419,7 @@ def main():
     records = convertCoordinates(records)
     records = stripWhitespace(records)
     records, graveyard = handleDuplicates(records, graveyard=graveyard)
-    records, graveyard = finishScrubbing(records, graveyard)
+    records, graveyard = applyMiscellaneousScrubbing(records, graveyard)
     save(graveyard, graveyardPath, fixEncoding=False)
     records = fixEncoding(records)
     records = fillInCountyInfo(records)
