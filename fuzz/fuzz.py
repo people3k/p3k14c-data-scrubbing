@@ -76,9 +76,12 @@ for i,s in enumerate(global_shp.shapes()):
     elif country in GBC_countries:
         GBC_bounds.append(makePair(s,i))
 
+
 # Get the ADMIN2 centroid given a point and the bound set to use
 # Returns lon,lat
 def toCentroid(lon,lat,bound_set):
+    if str(lon) == 'nan' or str(lat) == 'nan':
+        return np.nan,np.nan
     point = Point((lon,lat))
     # Iterate through every shape in the set to see if the point is in one
     for i in range(len(bound_set)):
