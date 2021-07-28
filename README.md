@@ -27,3 +27,9 @@ Fuzzing is required for all dates in the USA, Canada, and the GuedesBocinsky2018
 
 ## Independent "remove duplicates" feature
 If you need to remove duplicate records from a certain dataset without necessarily running the entire scrubbing process on it, this is achievable through ``removeDuplicates.py``. Simply run ``python removeDuplicates.py infile_name.csv outfile_name.csv`` and the program will run only the duplicate removal subroutine on ``infile_name.csv`` and save the resulting dataset to ``outfile_name.csv``.
+
+## Fixing corrupted Unicode in SiteNames
+
+Included in this package is a series of tools for fixing Unicode errors within the "SiteName" column. It utilizes the GeoNames dataset to suggest and make substitutions for detected anomalous SiteNames, turning a once onorous manual process into one that is largely automated. 
+
+Located within the ``charfix`` directory, the ``correct.py`` script may be used to begin the SiteName correction process. This script will output a table of substitutions to make, which ``applyFixes.py`` may then be used to apply the substitutions to a particular file.
