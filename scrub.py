@@ -63,6 +63,53 @@ def fixTypos(records):
     )
     return records
 
+# Check to see if a string contains corrupted unicode characters
+def isCorrupted(elem):
+    datum = str(elem)
+    stripped = str(datum).replace('-', '')\
+                    .replace('\t', '')\
+                    .replace('/', '')\
+                    .replace(':', '')\
+                    .replace('.', '')\
+                    .replace(',', '')\
+                    .replace('"', '')\
+                    .replace("'", '')\
+                    .replace("=", '')\
+                    .replace("&", '')\
+                    .replace("-", '')\
+                    .replace("*", '')\
+                    .replace("°", '')\
+                    .replace("\\", '')\
+                    .replace("[", '')\
+                    .replace("]", '')\
+                    .replace("#", '')\
+                    .replace("+", '')\
+                    .replace("%", '')\
+                    .replace("<", '')\
+                    .replace(">", '')\
+                    .replace('»', '')\
+                    .replace('«', '')\
+                    .replace("–", '')\
+                    .replace(';', '')\
+                    .replace('--', '')\
+                    .replace('\n', '')\
+                    .replace('(', '')\
+                    .replace(')', '')\
+                    .replace('0', '')\
+                    .replace('1', '')\
+                    .replace('2', '')\
+                    .replace('3', '')\
+                    .replace('4', '')\
+                    .replace('5', '')\
+                    .replace('6', '')\
+                    .replace('7', '')\
+                    .replace('8', '')\
+                    .replace('9', '')\
+                    .replace('_', '')
+    # If it is still not alphanumeric after stripping ordinary symbols
+    return not stripped.replace(' ','').isalnum()
+
+ 
 # Remove records with unknown lab codes,
 # and generate a list of unknown lab identifiers.
 def deleteBadLabs(records, graveyard):
@@ -109,6 +156,12 @@ def deleteBadLabs(records, graveyard):
     funeral['removal_reason'] = 'Question mark in lab code'
     graveyard = graveyard.append(embalm(funeral))
     records   = records[records[LAB_ID].apply(fil)]
+
+    # Remove records with corrupted Unicode characters
+    funeral = records[records[LAB_ID].apply(isCorrupted)]
+    funeral['removal_reason'] = 'Corrupted Unicode characters in Lab ID'
+    graveyard = graveyard.append(embalm(funeral))
+    records   = records[~records[LAB_ID].apply(isCorrupted)]
 
     # Scrub leading whitespace
     records[LAB_ID] = records[LAB_ID].apply(lambda s: s.lstrip())
