@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you reference or use this software, please cite it as below."
+authors:
+- family-names: "Miranda"
+  given-names: "Lux"
+  orcid: "https://orcid.org/0000-0002-3753-7405"
+title: "Scrubbing suite for p3k14c: A synthetic global database of archaeological radiocarbon dates"
+version: 1.1.0
+doi: 10.5281/zenodo.5517673
+date-released: 2021-09-20
+url: "https://github.com/people3k/p3k14c-data-scrubbing"
