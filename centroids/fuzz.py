@@ -8,10 +8,7 @@ if __name__ == '__main__':
         exit(1)
     print('Initializing...')
  
-inFilePath, outFilePath = sys.argv[1], sys.argv[2]
 MUSH = False
-if len(sys.argv) == 4 and sys.argv[3] == 'mush':
-    MUSH = True
 
 import shapefile
 import numpy as np
@@ -198,6 +195,12 @@ def fixCoord(coord):
 
 
 def main():
+    global MUSH
+
+    inFilePath, outFilePath = sys.argv[1], sys.argv[2]
+    if len(sys.argv) == 4 and sys.argv[3] == 'mush':
+        MUSH = True
+
     print('Loading in radiocarbon records...')
     records = pd.read_csv(inFilePath,index_col=0,low_memory=False)
 
