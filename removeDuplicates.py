@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import re
 from math import ceil
 from common import getRecords, LAB_ID, LAB_CODE_FILE, LAT, LON, AGE, STD_DEV, LOC_ACCURACY, SOURCE, PROVINCE, FUZZ_FACTOR, flushMsg, setMinus, D13C, embalm
 
@@ -133,7 +134,8 @@ def combineDups(x):
     # If we're looking at d13C
     if x.name == D13C:
         # Cast to floats for ease
-        floats = [float(x.iloc[i]) for i in range(len(x))]
+        floatCast = lambda d : float(re.sub('[^-\d.]+', '', d))
+        floats = [floatCast(x.iloc[i]) for i in range(len(x))]
         # Get values between -1 and -30
         goodVals = [n for n in floats if -30 <= n and n <= -1]
         # Leave blank if theres more than one value between -1 and -30

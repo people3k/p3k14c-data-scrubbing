@@ -109,6 +109,19 @@ def isCorrupted(elem):
     # If it is still not alphanumeric after stripping ordinary symbols
     return not stripped.replace(' ','').isalnum()
 
+def standardizeLabID(labid):
+    # Remove anything but a-Z and 0-9, and capitalize all letters
+    labid = ''.join([
+        c.upper() for c in labid \
+         if c.upper() in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    ])
+    # Place a dash between the first separation of letters and numbers
+    sep = None
+    for i in range(len(labid)):
+        if labid[i] in '0123456789':
+            sep = i
+            break
+    return labid[:sep] + '-' + labid[sep:]
  
 # Remove records with unknown lab codes,
 # and generate a list of unknown lab identifiers.
@@ -165,6 +178,9 @@ def deleteBadLabs(records, graveyard):
 
     # Scrub leading whitespace
     records[LAB_ID] = records[LAB_ID].apply(lambda s: s.lstrip())
+
+    # Standardize lab ID format
+    records[LAB_ID] = records[LAB_ID].apply(standardizeLabID)
 
     records = records.set_index(LAB_ID)
     return records, graveyard
